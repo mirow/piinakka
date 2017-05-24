@@ -1,0 +1,21 @@
+{
+    "ambientDependencies": {
+        "angular": "registry:dt/angular#1.5.0+20160328125810",
+        "angular-gettext": "registry:dt/angular-gettext#0.0.0+20160317120654",
+        "angular-ui-router": "registry:dt/angular-ui-router#1.1.5+20160412134757",
+        "body-parser": "registry:dt/body-parser#0.0.0+20160317120654",
+        "express": "registry:dt/express#4.0.0+20160317120654",
+        "express-serve-static-core": "registry:dt/express-serve-static-core#0.0.0+20160322035842",
+        "jquery": "registry:dt/jquery#1.10.0+20160316155526",
+        "lodash": "registry:global/lodash#4.0.0+20160412191414",
+        "mime": "registry:dt/mime#0.0.0+20160316155526",
+        "node": "registry:dt/node#4.0.0+20160412142033",
+        "passport": "registry:dt/passport#0.2.0+20160317120654",
+        "passport-strategy": "registry:dt/passport-strategy#0.2.0+20160316155526",
+        "serve-static": "registry:dt/serve-static#0.0.0+20160317120654"
+    },
+    "dependencies": {
+        "debug": "registry:npm/debug#2.0.0+20160211003958",
+        "moment": "registry:npm/moment#2.10.5+20160211003958"
+    }
+}
