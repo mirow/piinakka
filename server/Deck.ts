@@ -4,12 +4,16 @@ import SetOfCards from "./SetOfCards";
 
 export default class Deck extends SetOfCards {
 
-  cardType: Cards;
+  static seed = 1;
 
-  constructor(cType: Cards, maxCards: number) {
-    super(cType, maxCards);
-    this.cardType = cType;
+  constructor(maxCards: number) {
+    super(maxCards);
     this.reset();
+  }
+
+  static random() {
+    var x = Math.sin(Deck.seed++) * 10000;
+    return x - Math.floor(x);
   }
 
   shuffle() {
@@ -17,7 +21,7 @@ export default class Deck extends SetOfCards {
     let tmp: number;
 
     for (let n = 0; n < this.cardCount; n++) {
-      m = Math.floor(Math.random() * this.cardCount);
+      m = Math.floor(Deck.random() * this.cardCount);
       tmp = this.cards[n];
       this.cards[n] = this.cards[m];
       this.cards[m] = tmp;
@@ -34,7 +38,7 @@ export default class Deck extends SetOfCards {
     return this.cards[this.cardCount];
   }
 
-  dealCards(cardCount) : number[]{
+  dealCards(cardCount): number[] {
     let deltCards = [];
     for (let n = 0; n < cardCount; n++)
       deltCards[n] = this.getCard();

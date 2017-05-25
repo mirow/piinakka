@@ -4,7 +4,6 @@ import SetOfCards from './SetOfCards';
 import Util from './Util';
 
 export default class Player {
-  cardType: Cards;
   playerStrategy = 0;
   odds;
   myCards: SetOfCards;
@@ -48,13 +47,12 @@ export default class Player {
     this.allPlayersBITMASK = Util.power(2, numberOfPlayers + 1) - 2;
     this.otherplayersBITMASK = this.allPlayersBITMASK & (~playerId);
     //console.log('bitmasks: ' + this.allPlayersBITMASK + " " + this.otherplayersBITMASK);
-    this.cardType = new Cards();
-    this.myCards = new SetOfCards(this.cardType, maxCards);
-    this.cardStatus = new Array(this.cardType.CARDSINDECK);
-    this.newGame(playerId);
+    this.myCards = new SetOfCards(maxCards);
+    this.cardStatus = new Array(Cards.CARDSINDECK);
+    this.newGame();
 
     this.myPlayerID = playerId;
-    this.myCards.subset = new SetOfCards(this.cardType, maxCards);
+    this.myCards.subset = new SetOfCards(maxCards);
   }
 
   addpoints(pts, message: string, statID) {
@@ -86,37 +84,37 @@ export default class Player {
   /**
    * This function decides which suit is the best trump for this player.
    * The player's bid is stored in CardPlayer.points.
-   * @return The best suit.
+   * @return trump integer The best suit.
    */
-  bidForTrump() {
-
-    let canbetrump = false;
-    let maxpoints = 0;
-    let maxtrick = 0;
-    let maxpot = 0;
-    let mytrump = null;
-    for (let m = 0; m < 4; m++) {
-      canbetrump = this.checkForPoints(m);
-      this.checkTrickPoints(m);
-      if (canbetrump && (this.points + this.trickPoints + this.potpoints > maxpoints)) {
-        mytrump = m;
-        maxpoints = this.points + this.trickPoints + this.potpoints;
-        maxtrick = this.trickPoints;
-        maxpot = this.potpoints;
+  bidForTrump(): number {
+    let canBeTrump = false;
+    let maxPoints = 0;
+    let maxTrick = 0;
+    let maxPot = 0;
+    let bestTrump = null;
+    // ** calculate which suit as trump gives the most points
+    for (let suit = 0; suit < 4; suit++) {
+      canBeTrump = this.checkForPoints(suit);
+      this.checkTrickPoints(suit);
+      if (canBeTrump && (this.points + this.trickPoints + this.potpoints > maxPoints)) {
+        bestTrump = suit;
+        maxPoints = this.points + this.trickPoints + this.potpoints;
+        maxTrick = this.trickPoints;
+        maxPot = this.potpoints;
       }
     }
-    this.points = maxpoints - maxtrick - maxpot;
-    this.potpoints = maxpot;
-    return mytrump;
+    this.points = maxPoints - maxTrick - maxPot;
+    this.potpoints = maxPot;
+    return bestTrump;
   }
 
   checkTrickPoints(trump) {
     this.trickPoints = 0;
     for (let i = 0; i < this.myCards.cardCount; i++) {
-      if (this.cardType.getSuit(this.myCards.cards[i]) == trump) {
-        this.trickPoints += this.trickValues[this.cardType.getRank(this.myCards.cards[i])];
+      if (Cards.getSuit(this.myCards.cards[i]) == trump) {
+        this.trickPoints += this.trickValues[Cards.getRank(this.myCards.cards[i])];
       } else {
-        this.trickPoints += this.trickValues[this.cardType.getRank(this.myCards.cards[i]) + 6];
+        this.trickPoints += this.trickValues[Cards.getRank(this.myCards.cards[i]) + 6];
       }
     }
   }
@@ -709,7 +707,7 @@ export default class Player {
         if (tmpCardsMissing == 0) {
           this.addpoints(100, "ruter dubbelhela", 3);
           canBeTrump = true;
-          dubbelHela = true;
+          //dubbelHela = true;
         } else {
           this.addPotentialpoints(100, "ruter dubbelhela ", tmpCardsMissing, 1);
         }
@@ -811,36 +809,33 @@ export default class Player {
     return canBeTrump;
   }
 
+  /**
+   * Check if player has a higher card
+   *
+   * @param suit
+   * @param card
+   * @return {boolean}
+   */
   haveHigher(suit, card) {
     let n = 0;
     if (!this.myCards.sorted) {
       this.myCards.sortCards();
     }
-//    console.log("have higher n:"+n);
 
     if (suit === null) {
       return true;
     } // any suit -> any card will do
-//    console.log("orig suit: "+suit);
-//    console.log("orig rank: "+Cards.getRank(card));
 
     while (n < this.myCards.cardCount) {
-//      console.log("while suit: "+Cards.getSuit(this.myCards.cards[n]));
-//      console.log("while rank: "+Cards.getRank(this.myCards.cards[n]));
-      if ((this.cardType.getRank(card) > this.cardType.getRank(this.myCards.cards[n]) && this.cardType.getSuit(this.myCards.cards[n]) == suit)) {
+      if ((Cards.getRank(card) > Cards.getRank(this.myCards.cards[n]) &&
+        Cards.getSuit(this.myCards.cards[n]) == suit)) {
         break;
       }
       n++;
 
     }
-//   console.log("after while n:"+n);
     if (n < this.myCards.cardCount) {
-      if (this.cardType.getSuit(this.myCards.cards[n]) == suit) // is same suit
-      {
-        return true;
-      } else {
-        return false;
-      }
+      return Cards.getSuit(this.myCards.cards[n]) == suit;
     } else {
       return false;
     }
@@ -850,7 +845,7 @@ export default class Player {
     if (suit == null) {
       return this.myCards;
     } // any suit -> any card will do
-    let higherCards = new SetOfCards(this.cardType, this.myCards.maxCardCount);
+    let higherCards = new SetOfCards(this.myCards.maxCardCount);
 
     let n = 0;
     if (!this.myCards.sorted) {
@@ -858,7 +853,8 @@ export default class Player {
     }
     while (n < this.myCards.cardCount) {
 //      console.log("card/2: "+ card/2+ ", my/2: "+this.myCards.cards[n]/2+", mysuit: "+this.myCards.cards[n] / 12 +", suit: "+suit);
-      if (this.cardType.getRank(card) > this.cardType.getRank(this.myCards.cards[n]) && this.cardType.getSuit(this.myCards.cards[n]) == suit) {
+      if (Cards.getRank(card) > Cards.getRank(this.myCards.cards[n]) &&
+        Cards.getSuit(this.myCards.cards[n]) == suit) {
         break;
       }
       n++;
@@ -867,7 +863,8 @@ export default class Player {
     //let retcards = [];
     let i = 0;
     while (n < this.myCards.cardCount) {
-      if (this.cardType.getRank(card) > this.cardType.getRank(this.myCards.cards[n]) && (this.cardType.getSuit(this.myCards.cards[n]) == suit)) { // is same suit and higher
+      if (Cards.getRank(card) > Cards.getRank(this.myCards.cards[n]) &&
+        (Cards.getSuit(this.myCards.cards[n]) == suit)) { // is same suit and higher
 //        retcards[i] = this.myCards.cards[n];
         higherCards.addCard(this.myCards.cards[n]);
         i++;
@@ -879,63 +876,71 @@ export default class Player {
     return higherCards;
   }
 
+  /**
+   * Select a card to play
+   * @param cardsOnTable
+   * @param trump
+   * @param highestCard
+   * @param remainingPlayers which players will play after me
+   * @return {any}
+   */
   playCard(cardsOnTable: SetOfCards, trump, highestCard, remainingPlayers) {
-    let takeTrick = true;
+    let haveHigherCard = true;
     let playableCards: SetOfCards;
-    let originalSuit = this.cardType.getSuit(cardsOnTable.cards[0]);
+    let originalSuit = Cards.getSuit(cardsOnTable.cards[0]);
 
     if (cardsOnTable.cardCount == 0) { // first player, play any card
       if (this.LOGICDEBUG) {
         console.log("play any");
       }
 
-      playableCards = this.getHigher(null, this.cardType.CARDSINDECK);
+      playableCards = this.getHigher(null, Cards.CARDSINDECK);
     }
     else {
 //      console.log("suit: "+originalSuit);
-      if (this.cardType.getSuit(highestCard) == trump && originalSuit == trump) { // first card is trump
+      if (Cards.getSuit(highestCard) == trump && originalSuit == trump) { // first card is trump
         if (this.haveHigher(trump, highestCard)) { // I have higher trump, will play it
           if (this.LOGICDEBUG) {
             console.log("trump: have higher trump");
           }
           playableCards = this.getHigher(trump, highestCard);
-        } else if (this.haveHigher(trump, this.cardType.CARDSINDECK)) {// I have lower trump, must play it
+        } else if (this.haveHigher(trump, Cards.CARDSINDECK)) {// I have lower trump, must play it
           if (this.LOGICDEBUG) {
             console.log("trump: have lower trump ");
           }
-          takeTrick = false;
-          playableCards = this.getHigher(trump, this.cardType.CARDSINDECK);
+          haveHigherCard = false;
+          playableCards = this.getHigher(trump, Cards.CARDSINDECK);
         } else { // don't have trump, play any card
           if (this.LOGICDEBUG) {
             console.log("trump: play any");
           }
-          takeTrick = false;
-          playableCards = this.getHigher(null, this.cardType.CARDSINDECK);
+          haveHigherCard = false;
+          playableCards = this.getHigher(null, Cards.CARDSINDECK);
         }
-      } else if (this.cardType.getSuit(highestCard) == trump) { // trump played
-        if (this.haveHigher(originalSuit, this.cardType.CARDSINDECK)) { // I have card in original suite, must play it
+      } else if (Cards.getSuit(highestCard) == trump) { // trump played
+        if (this.haveHigher(originalSuit, Cards.CARDSINDECK)) { // I have card in original suite, must play it
           if (this.LOGICDEBUG) {
             console.log("suit+trump: have suit " + trump);
           }
-          takeTrick = false;
-          playableCards = this.getHigher(originalSuit, this.cardType.CARDSINDECK);
+          haveHigherCard = false;
+          playableCards = this.getHigher(originalSuit, Cards.CARDSINDECK);
         } else if (this.haveHigher(trump, highestCard)) { // I have higher trump, will play it
           if (this.LOGICDEBUG) {
             console.log("suit+trump: have higher trump " + trump);
           }
           playableCards = this.getHigher(trump, highestCard);
-        } else if (this.haveHigher(trump, this.cardType.CARDSINDECK)) {// I have lower trump, must play it
+        } else if (this.haveHigher(trump, Cards.CARDSINDECK)) {// I have lower trump, must play it
           if (this.LOGICDEBUG) {
             console.log("suit+trump: have lower trump " + trump);
           }
-          takeTrick = false;
-          playableCards = this.getHigher(trump, this.cardType.CARDSINDECK);
+          haveHigherCard = false;
+          playableCards = this.getHigher(trump, Cards.CARDSINDECK);
         } else { // play any card
           if (this.LOGICDEBUG) {
             console.log("suit+trump: play any " + trump);
           }
-          takeTrick = false;
-          playableCards = this.getHigher(null, this.cardType.CARDSINDECK);
+          haveHigherCard = false;
+          playableCards = this.getHigher(null, Cards.CARDSINDECK);
         }
       } else { // trump not played
         if (this.haveHigher(originalSuit, highestCard)) { // I have higher card, will play it
@@ -943,53 +948,55 @@ export default class Player {
             console.log("have higher");
           }
           playableCards = this.getHigher(originalSuit, highestCard);
-        } else if (this.haveHigher(originalSuit, this.cardType.CARDSINDECK)) { // I have lower card, must play it
+        } else if (this.haveHigher(originalSuit, Cards.CARDSINDECK)) { // I have lower card, must play it
           if (this.LOGICDEBUG) {
             console.log("have lower");
           }
-          takeTrick = false;
-          playableCards = this.getHigher(originalSuit, this.cardType.CARDSINDECK);
-        } else if (this.haveHigher(trump, this.cardType.CARDSINDECK)) {// I have trump, will play it
+          haveHigherCard = false;
+          playableCards = this.getHigher(originalSuit, Cards.CARDSINDECK);
+        } else if (this.haveHigher(trump, Cards.CARDSINDECK)) {// I have trump, will play it
           if (this.LOGICDEBUG) {
             console.log("have trump");
           }
-          playableCards = this.getHigher(trump, this.cardType.CARDSINDECK);
+          playableCards = this.getHigher(trump, Cards.CARDSINDECK);
         } else {
           if (this.LOGICDEBUG) {
             console.log("have any");
           }
-          takeTrick = false;
-          playableCards = this.getHigher(null, this.cardType.CARDSINDECK);
+          haveHigherCard = false;
+          playableCards = this.getHigher(null, Cards.CARDSINDECK);
         }
       }
     }
 
     let cardToPlay;
-    if (takeTrick) {
+    if (haveHigherCard) {
       // try to take the trick
       if (playableCards.cardCount == 1) {
+        // play the only possible card
         if (this.LOGICDEBUG) {
           console.log("Playable cards 1: " + playableCards);
         }
         cardToPlay = playableCards.cards[0];
-        this.myCards.removeCard(cardToPlay); // play the only possible card
-      } else if (playableCards.cardCount == 2 && Math.floor(playableCards.cards[0] / 2) == Math.floor(playableCards.cards[1] / 2)) {
+        this.myCards.removeCard(cardToPlay);
+      } else if (playableCards.cardCount == 2 &&
+        Math.floor(playableCards.cards[0] / 2) == Math.floor(playableCards.cards[1] / 2)) {
+        // have two identical cards
         if (this.LOGICDEBUG) {
           console.log("Playable cards 2: " + playableCards);
         }
         cardToPlay = playableCards.cards[0];
-        this.myCards.removeCard(cardToPlay); // both cards are the same
+        this.myCards.removeCard(cardToPlay);
       } else {
+        // play the best card
         if (this.LOGICDEBUG) {
           console.log("Playable cards: " + playableCards);
         }
-
         cardToPlay = this.findBestCard(playableCards, trump, remainingPlayers, cardsOnTable.cards[0]);
-        this.myCards.removeCard(cardToPlay); // play the best card
+        this.myCards.removeCard(cardToPlay);
       }
     } else {
       // throw the lowest card you have
-
       playableCards.sortCardsByRank(trump);
       if (this.LOGICDEBUG) {
         console.log("Playable low cards sorted: " + playableCards);
@@ -998,13 +1005,13 @@ export default class Player {
       this.myCards.removeCard(cardToPlay); // play the lowest card
     }
     if (this.LOGICDEBUG) {
-      console.log(this.myPlayerID + " Card Played: " + this.cardType.cardString(cardToPlay));
+      console.log(this.myPlayerID + " Card Played: " + Cards.cardString(cardToPlay));
     }
 
     return cardToPlay;
   }
 
-  newGame(playerID) {
+  newGame() {
     this.myCards.clear();
     for (let n = 0; n < this.cardStatus.length; n++) {
       this.cardStatus[n] = this.otherplayersBITMASK; // anyone else may have card
@@ -1021,7 +1028,16 @@ export default class Player {
     }
   }
 
-  findBestCard(playableCards: SetOfCards, trump, remainingPlayers, originalCard) {
+  /**
+   * Find the best card to play
+   *
+   * @param playableCards SetOfCards set of legal cards to play
+   * @param trump
+   * @param remainingPlayers
+   * @param highestCardOnTable
+   * @return {number}
+   */
+  findBestCard(playableCards: SetOfCards, trump, remainingPlayers, highestCardOnTable) {
     let cardOdds = [];
 //    let tmp;
     if (remainingPlayers == 0) { // I'm the last player, play lowest possible card
@@ -1032,81 +1048,134 @@ export default class Player {
       playableCards.sortCardsByRank(trump);
       // play lowest card with best odds
       for (let n = 0; n < playableCards.cardCount; n++) {
-        cardOdds[n] = this.getOdds(playableCards.cards[n], trump, remainingPlayers, originalCard);
-        if (this.LOGICDEBUG) {
-          console.log(this.cardType.cardString(playableCards.cards[n]) + " - " + cardOdds[n] + "%");
-        }
-//        if (myPlayerID==2) console.log(this.cardType.cardString(playableCards.cards[n])+" - " + cardOdds[n]+"%");
+        cardOdds[n] = this.getOdds(playableCards.cards[n], trump, remainingPlayers, highestCardOnTable);
+        //if (this.LOGICDEBUG) {
+        console.log(Cards.cardString(playableCards.cards[n]) + " - " + cardOdds[n] + "%");
+        // }
       }
-//      tmp =
+
+      // sort cards by odds (lowest first)
       Util.ArraySort2(cardOdds, playableCards.cards);
 //      cardOdds=tmp[0];
 //      for (n=0;n<playableCards.cardCount;n++) {
-//        if (myPlayerID == 2) console.log(this.cardType.cardString(
+//        if (myPlayerID == 2) console.log(Cards.cardString(
 //            playableCards.cards[n]) + " - " + cardOdds[n] + "%");
 //      }
-      if (cardOdds[cardOdds.length - 1] >= 500) {
-        if (this.playerStrategy == 1) {
-          for (let i = cardOdds.length - 2; i > 0; i--)
-            if (cardOdds[i] < cardOdds[cardOdds.length - 1]) {
-              return playableCards.cards[i + 1]; // return lowest card with best odds (over 50%)
+
+      // if all non-trump cards are 0%, play card in smallest suit, that is not an ace
+      let allZeros = true;
+      for (let n = cardOdds.length - 1; n > 0; n--) {
+        if (Cards.getSuit(playableCards.cards[n]) != trump && cardOdds[n] > 0) {
+          // found >0% card that is not trump
+          allZeros = false;
+          break;
+        }
+      }
+      if (allZeros) {
+        //console.log('All non trumps are zero');
+        // play card in smallest suit (not trump), that is not an ace
+        let suitCounts = this.getSmallestSuits(this.myCards);
+        //console.log(JSON.stringify(suitCounts));
+        var suitCount = suitCounts.suitCount;
+
+        var suits = suitCounts.suits;
+        for (let i = 0; i < 4; i++) {
+          //console.log('Checking suit ' + Cards.suits[suits[i]]);
+          if (suits[i] == trump || suitCount[i]==0) {
+            //console.log('skipping this suit');
+            continue;
+          }
+          for (let j = 0; j < playableCards.cardCount; j++) {
+            if (Cards.getSuit(playableCards.cards[j]) == suits[i] && Cards.getRank(playableCards.cards[j]) != 0) {
+              return playableCards.cards[j];
             }
+          }
+        }
+
+      }
+      if (cardOdds[cardOdds.length - 1] >= 50) {
+        if (this.playerStrategy == 1) {
+          for (let i = 0; i < cardOdds.length; i++)
+            if (cardOdds[i] >= 50) {
+              console.log('playing lowest card with odds over 50%');
+              return playableCards.cards[i]; // return lowest card with best odds (over 50%)
+            }
+          console.log('playing worst card');
           return playableCards.cards[0];
         } else {
+          console.log('playing last card');
+
           return playableCards.cards[cardOdds.length - 1];
         }
       } else {
+        console.log('playing worst card, none over 50%');
+
         return playableCards.cards[0]; // return card with worst odds
       }
     }
+
   }
 
-  getOdds(myCard, trump, remainingPlayers, originalCard) {
-    let mySuit = this.cardType.getSuit(myCard);
-    let start = mySuit * this.cardType.CARDSINSUIT; // highest card in suit
-    let end = (Math.floor(myCard / 2)) * 2; //
+  /**
+   * Calculate the odds that this card will win the round.
+   * @param thisCard
+   * @param trump
+   * @param remainingPlayers
+   * @param highestCardOnTable
+   * @return {number}
+   */
+  getOdds(thisCard, trump, remainingPlayers, highestCardOnTable) {
+    let thisCardSuit = Cards.getSuit(thisCard);
+    let highestCard;
+    let lowestCard;
     let notHigher;
     let notLower = [];
     let notTrump = [];
-    let totsum;
+    let totalSum;
     let possibleOwners;
     let ownersLeft;
     let thisOwner;
     if (this.DEBUG) {
-      console.log("card to compare: " + this.cardType.cardString(myCard));
+      console.log("card to compare: " + Cards.cardString(thisCard));
     }
-//    console.log("originalcard: " +originalCard);
-    totsum = 1000;
-    notHigher = 1000;
-    if (mySuit == this.cardType.getSuit(originalCard) || originalCard === null) { // I have original suit, or can play any suit
-      start = mySuit * 12; // highest card in suit
-      end = ( Math.floor(myCard / 2)) * 2; //
-      if (this.DEBUG) console.log("start-end: " + start + " - " +end);
-      for (let n = start; n < end; n++) {
-        if (this.DEBUG) {
-          console.log("H comparing: " + this.cardType.cardString(n) + ' status: ' + this.cardStatus[n] );
+//    console.log("highestCardOnTable: " +highestCardOnTable);
+    totalSum = 100;
+    notHigher = 100;
+    if (thisCardSuit == Cards.getSuit(highestCardOnTable) || highestCardOnTable === null) {
+      // I have original suit, or can play any suit
+      highestCard = thisCardSuit * Cards.CARDSINSUIT; // highest card in suit (ace)
+      lowestCard = ( Math.floor(thisCard / 2)) * 2;
+      if (this.DEBUG) {
+        console.log("highestCard-lowestCard: " + highestCard + " - " + lowestCard);
+      }
+
+      // check all cards that are higher than mine in this suit
+      for (let n = highestCard; n < lowestCard; n++) {
+        if (this.DEBUG2) {
+          console.log("H comparing: " + Cards.cardString(n) + ' status: ' + this.cardStatus[n]);
         }
-        // calculate chance of this player NOT having card
+        // calculate chance of remaining players NOT having card
         possibleOwners = this.bitCount(this.cardStatus[n] & (this.otherplayersBITMASK));
         ownersLeft = this.bitCount(this.cardStatus[n] & remainingPlayers);
         if (possibleOwners != 0) {
 //            notHigher[player] *= 1000 -
 //                this.bitCount(this.cardStatus[n] & (2 << player)) * 1000 / possibleOwners;
-          notHigher *= 1000 - ownersLeft * 1000 / possibleOwners;
-          notHigher /= 1000;
+          notHigher *= 100 - ownersLeft * 100 / possibleOwners;
+          notHigher /= 100;
         }
-       // console.log("possible: "+possibleOwners);
+        // console.log("possible: "+possibleOwners);
         //        console.log("sum: " + notHigher[player]);
       }
       if (this.DEBUG) {
-        console.log("notHigher: " + notHigher);
+        console.log("Chance of other players not having a higher card in suit: " + notHigher.toFixed(2) + '%');
       }
-      totsum *= notHigher;
-      totsum /= 1000;
-      if (mySuit != trump) { // suit is not trump
+      totalSum *= notHigher;
+      totalSum /= 100;
+      if (thisCardSuit != trump) {
+        // suit is not trump, so check all trump cards also
         for (let player = 0; player < this.NumberOfPlayers; player++) {
-          notLower[player] = 1000;
-          notTrump[player] = 1000;
+          notLower[player] = 100;
+          notTrump[player] = 100;
 
           thisOwner = 2 << player;
           if ((thisOwner & remainingPlayers) == 0) {
@@ -1114,111 +1183,106 @@ export default class Player {
           }
 
           if (this.DEBUG) {
-            console.log("player " + player);
+            console.log("Checking trump for player " + player);
           }
 
-          let lstart = ( Math.floor(myCard / 2)) * 2; // check for lower cards in suit
-          let lend = mySuit * 12 + 12;
+          let lstart = ( Math.floor(thisCard / 2)) * 2; // check for lower cards in suit
+          let lend = thisCardSuit * Cards.CARDSINSUIT + Cards.CARDSINSUIT;
           //      if (this.DEBUG) console.log("lstart-lend: " + lstart + " - " +lend);
 
           for (let n = lstart; n < lend; n++) {
             if (this.DEBUG) {
-              console.log("L comparing: " + this.cardType.cardString(n));
+              console.log("L comparing: " + Cards.cardString(n));
             }
 
             // calculate chance of this player NOT having card
             possibleOwners = this.bitCount(this.cardStatus[n] & this.otherplayersBITMASK);
             ownersLeft = this.bitCount(this.cardStatus[n] & thisOwner);
             if (possibleOwners != 0) {
-              notLower[player] *= 1000 - ownersLeft * 1000 / possibleOwners;
-              notLower[player] /= 1000;
+              notLower[player] *= 100 - ownersLeft * 100 / possibleOwners;
+              notLower[player] /= 100;
             }
-//          console.log("possible: "+possibleOwners);
-            //        console.log("sum: " + notLower[player]);
+           //console.log("possible: "+possibleOwners);
+           //console.log("sum: " + notLower[player]);
           }
 
-          let tstart = trump * 12; // lowest trump
-          let tend = trump * 12 + 12; // highest trump
+          let tstart = trump * Cards.CARDSINSUIT; // lowest trump
+          let tend = trump * Cards.CARDSINSUIT + Cards.CARDSINSUIT; // highest trump
           //        if (this.DEBUG) console.log("lstart-lend: " + tstart + " - " +tend);
           for (let n = tstart; n < tend; n++) {
-            if (this.DEBUG) {
-              console.log("T comparing: " + this.cardType.cardString(n));
+            if (this.DEBUG2) {
+              console.log("T comparing: " + Cards.cardString(n));
             }
             // calculate chance of player NOT having card
             possibleOwners = this.bitCount(this.cardStatus[n] & this.otherplayersBITMASK);
             ownersLeft = this.bitCount(this.cardStatus[n] & thisOwner);
             if (possibleOwners != 0) {
-              notTrump[player] *= 1000 -
-                ownersLeft * 1000 /
-                possibleOwners;
-              notTrump[player] /= 1000;
+              notTrump[player] *= 100 - ownersLeft * 100 / possibleOwners;
+              notTrump[player] /= 100;
             }
 //          console.log("possible: "+possibleOwners);
             //        console.log("nottrump sum: " + notTrump[player]);;
           }
 
           if (this.DEBUG) {
-            console.log("notLower: " + notLower[player]);
+            console.log("Chance of player not having lower card in suit: " + notLower[player]);
           }
           if (this.DEBUG) {
-            console.log("notTrump: " + notTrump[player]);
+            console.log("Chance of player not having any trump: " + notTrump[player]);
           }
-          totsum *= 1000 - notLower[player] * (1000 - notTrump[player]) / 1000;
-          totsum /= 1000;
+          totalSum *= 100 - notLower[player] * (100 - notTrump[player]) / 100;
+          totalSum /= 100;
         }
-        /*        totsum *= 1000 -
+        /*        totalSum *= 1000 -
          (1000 - (notHigher[player] * (1000 - notLower[player])) / 1000) *
          (1000 - (notHigher[player] * notLower[player] * notTrump[player] / 1000 / 1000)) / 1000;
-         totsum /= 1000; */
-//      console.log("total: "+totsum);
+         totalSum /= 1000; */
+//      console.log("total: "+totalSum);
       }
-    } else { // I don't have original suit, so I'm playing trump
-      start = Math.floor(originalCard / 12) * 12; // highest card in original suit
-      end = start + 12; // lowest
+    } else { // I don't have original suit, so I'm playing trump or something else
+      highestCard = Math.floor(highestCardOnTable / Cards.CARDSINSUIT) * Cards.CARDSINSUIT; // highest card in original suit
+      lowestCard = highestCard + Cards.CARDSINSUIT; // lowest
       if (this.DEBUG) {
-        console.log("start-end: " + start + " - " + end);
+        console.log("highestCard-lowestCard: " + highestCard + " - " + lowestCard);
       }
 
       for (let player = 0; player < this.NumberOfPlayers; player++) {
-        notLower[player] = 1000;
-        notTrump[player] = 1000;
+        notLower[player] = 100;
+        notTrump[player] = 100;
         thisOwner = 2 << player;
         if ((thisOwner & remainingPlayers) == 0) {
           continue;
         }
 
-        for (let n = start; n < end; n++) {
-          if (this.DEBUG) {
-            console.log("S comparing: " + this.cardType.cardString(n));
+        for (let n = highestCard; n < lowestCard; n++) {
+          if (this.DEBUG2) {
+            console.log("S comparing: " + Cards.cardString(n));
           }
           // calculate chance of player NOT having card
           possibleOwners = this.bitCount(this.cardStatus[n] & this.otherplayersBITMASK);
           ownersLeft = this.bitCount(this.cardStatus[n] & thisOwner);
           if (possibleOwners != 0) {
-            notLower[player] *= 1000 -
-              ownersLeft * 1000 / possibleOwners;
-            notLower[player] /= 1000;
+            notLower[player] *= 100 - ownersLeft * 100 / possibleOwners;
+            notLower[player] /= 100;
           }
 //        console.log("possible: "+possibleOwners);
 //        console.log("sum: " + sum);
         }
-        let tstart = mySuit * 12; // highest trump
-        let tend = ( Math.floor(myCard / 2)) * 2; // lowest trump higher than mine
+        let tstart = thisCardSuit * Cards.CARDSINSUIT; // highest trump
+        let tend = ( Math.floor(thisCard / 2)) * 2; // lowest trump higher than mine
         //      if (this.DEBUG) console.log("lstart-lend: " + tstart + " - " +tend);
 
         for (let n = tstart; n < tend; n++) {
-          if (this.DEBUG) {
-            console.log("TT comparing: " + this.cardType.cardString(n));
+          if (this.DEBUG2) {
+            console.log("TT comparing: " + Cards.cardString(n));
           }
 
           // calculate chance of player NOT having trump
           possibleOwners = this.bitCount(this.cardStatus[n] & this.otherplayersBITMASK);
           ownersLeft = this.bitCount(this.cardStatus[n] & thisOwner);
           if (possibleOwners != 0) {
-            notTrump[player] *= 1000 -
-              ownersLeft * 1000 /
-              possibleOwners;
-            notTrump[player] /= 1000;
+            notTrump[player] *= 100 - ownersLeft * 100 / possibleOwners;
+            notTrump[player] /= 100;
           }
 //          console.log("possible: "+possibleOwners);
 //          console.log("sum: " + notTrump);
@@ -1230,17 +1294,17 @@ export default class Player {
           console.log("notTrump: " + notTrump[player]);
         }
         // !(!original & högretrumf)
-        totsum *= 1000 - (notLower[player] * (1000 - notTrump[player])) / 1000;
-        totsum /= 1000;
-        //      console.log("total: "+totsum);
+        totalSum *= 100 - (notLower[player] * (100 - notTrump[player])) / 100;
+        totalSum /= 100;
+        //      console.log("total: "+totalSum);
       }
 
     }
 
     if (this.DEBUG) {
-      console.log("odds for " + this.cardType.cardString(myCard) + ": " + totsum / 10 + "%");
+      console.log("odds for " + Cards.cardString(thisCard) + ": " + totalSum / 10 + "%");
     }
-    return totsum;
+    return totalSum;
   }
 
   bitCount(value) {
@@ -1272,41 +1336,36 @@ export default class Player {
     console.log();
   }
 
-  singleCardOwnerNotification(card: number, player, canBeTossed) {
+  updateCardStatus(card: number, player, canBeTossed) {
     if (canBeTossed) {
       this.cardStatus[card] = player | 1;
     } else {
-      this.cardStatus[card] = player | 1;
+      this.cardStatus[card] = player;
     }
   }
 
-  cardOwnerNotification(cards: SetOfCards, player, canBeTossed) {
+  updateCardsStatus(cards: SetOfCards, player, canBeTossed) {
     for (let i = 0; i < cards.cardCount; i++)
-      this.singleCardOwnerNotification(cards.cards[i], player, canBeTossed);
+      this.updateCardStatus(cards.cards[i], player, canBeTossed);
   }
 
-  cardStatusNotification(cardPlayed, player, previousHighCard, originalSuit, trump, i) {
+  cardStatusNotification(cardPlayed, player, previousHighCard, originalSuit, trump) {
     this.cardStatus[cardPlayed] = 0; // mark card as already played
-//    if (i==0) console.log(player+" card "+cardPlayed+" status: "+this.cardStatus[cardPlayed]);
-    if (this.cardType.getSuit(cardPlayed) != originalSuit) { // player doesn't have suit cards
-//      if (i==0) console.log("Player "+player+" doesn't have "+SetOfCards.suits[originalSuit]);
+    if (Cards.getSuit(cardPlayed) != originalSuit) { // player doesn't have suit cards
       for (let n = originalSuit * 12; n < originalSuit * 12 + 12; n++) {
         this.cardStatus[n] &= ~player;
-//        if (i==0) console.log("card "+n+" status: "+this.cardStatus[n]);
       }
-      if (this.cardType.getSuit(cardPlayed) != trump && originalSuit != trump) { // player didn't have trump either
-//        if (i==0) console.log("Player "+player+" doesn't have trump");
+      if (Cards.getSuit(cardPlayed) != trump && originalSuit != trump) { // player didn't have trump either
         for (let n = trump * 12; n < trump * 12 + 12; n++) { // player doesn't have trump
           this.cardStatus[n] &= ~player;
-//          if (i==0) console.log("card " + n + " status: " + this.cardStatus[n]);
         }
       }
     } else {
-      if (this.cardType.getRank(cardPlayed) >= this.cardType.getRank(previousHighCard) && this.cardType.getSuit(cardPlayed) == this.cardType.getSuit(previousHighCard)) {
+      if (Cards.getRank(cardPlayed) >= Cards.getRank(previousHighCard) &&
+        Cards.getSuit(cardPlayed) == Cards.getSuit(previousHighCard)) {
         // player doesn't have higher card than previousHighCard in same suit
-        for (let n = this.cardType.getSuit(cardPlayed) * 12; n < 2 * Math.floor(previousHighCard / 2); n++) {
+        for (let n = Cards.getSuit(cardPlayed) * 12; n < 2 * Math.floor(previousHighCard / 2); n++) {
           this.cardStatus[n] &= ~player;
-//          if (i==0) console.log(player+" card "+n+" status: "+this.cardStatus[n]);
         }
       }
     }
@@ -1321,57 +1380,49 @@ export default class Player {
   discardCards(count, trump) {
     let discardedCards = [];
     this.myCards.sortCardsByRank(trump);
-    let tmp: SetOfCards = new SetOfCards(this.cardType, 15);
+    let disposableCards: SetOfCards = new SetOfCards(15);
     for (let n = 0; n < this.myCards.cardCount; n++) {
       // check that card is not trump or ace
-      if (this.cardType.getSuit(this.myCards.cards[n]) != trump && this.cardType.getRank(this.myCards.cards[n]) > 0)
-      // add card to list of disposable cards.
-      {
-        tmp.addCard(this.myCards.cards[n]);
+      if (Cards.getSuit(this.myCards.cards[n]) != trump && Cards.getRank(this.myCards.cards[n]) > 0) {
+        disposableCards.addCard(this.myCards.cards[n]);
       }
     }
-    //console.log("disposable: "+tmp);
-    if (tmp.cardCount <= count) {
-      for (let n = 0; n < tmp.cardCount; n++) {
-        if (tmp.cards[n] % 12 < 4) {
+    disposableCards.sortCards();
+    console.log("disposable: "+disposableCards);
+    if (disposableCards.cardCount <= count) {
+      for (let n = 0; n < disposableCards.cardCount; n++) {
+        if (disposableCards.cards[n] % 12 < 4) {
           this.points += 10;
-        } else if (tmp.cards[n] % 12 < 8) {
+        } else if (disposableCards.cards[n] % 12 < 8) {
           this.points += 5;
         }
-        this.myCards.removeCard(tmp.cards[n]);
-        //console.log("1Discarding card "+this.cardType.cardString(tmp.cards[n]));
-        this.singleCardOwnerNotification(tmp.cards[n], 0, true);
+        this.myCards.removeCard(disposableCards.cards[n]);
+        //console.log("1Discarding card "+Cards.cardString(disposableCards.cards[n]));
       }
-      if (tmp.cardCount < 4) {
+      if (disposableCards.cardCount < count) {
         this.myCards.sortCardsByRank(trump);
-        for (let n = tmp.cardCount; n < count; n++) {
-          if (tmp.cards[0] % 12 < 4) {
+        for (let n = disposableCards.cardCount; n < count; n++) {
+          if (disposableCards.cards[0] % 12 < 4) {
             this.points += 10;
-          } else if (tmp.cards[0] % 12 < 8) {
+          } else if (disposableCards.cards[0] % 12 < 8) {
             this.points += 5;
           }
-          discardedCards.push(this.myCards.removeCard(tmp.cards[0]));
-          //console.log("2Discarding card "+this.cardType.cardString(tmp.cards[0]));
-          this.singleCardOwnerNotification(tmp.cards[0], 0, true);
+          discardedCards.push(this.myCards.removeCard(disposableCards.cards[0]));
+          //console.log("2Discarding card "+Cards.cardString(disposableCards.cards[0]));
         }
       }
     } else {
-      tmp.sortCards();
-      let suitcount = [];
-      let suits = [0, 1, 2, 3];
-      // check how many cards in each suit
-      for (let n = 0; n < tmp.cardCount; n++) {
-        suitcount[Math.floor(tmp.cards[n] / 12)]++;
-      }
-      // see which suits are the smallest
-      Util.ArraySort2(suitcount, suits);
-      //console.log(JSON.stringify(suits));
+      disposableCards.sortCards();
+      let suitCounts = this.getSmallestSuits(disposableCards);
+      var suitCount = suitCounts.suitCount;
+      var suits = suitCounts.suits;
+      console.log('suits: ' + JSON.stringify(suitCount) + ' ' + JSON.stringify(suits));
       // remove cards from smallest suit(s)
       let i = count;
       let j = 0;
       let k = 0;
       while (i > 0) {
-        let card = tmp.getCardBySuit(suits[j], k);
+        let card = disposableCards.getCardBySuit(suits[j], k);
         if (card === null) { // no more cards in that suit, take next suit
           j++;
           k = 0;
@@ -1382,8 +1433,7 @@ export default class Player {
             this.points += 5;
           }
           discardedCards.push(this.myCards.removeCard(card));
-          //console.log("3Discarding card "+this.cardType.cardString(card));
-          this.singleCardOwnerNotification(card, 0, true);
+          //console.log("3Discarding card "+Cards.cardString(card));
           k++;
           i--;
         }
@@ -1395,6 +1445,22 @@ export default class Player {
       }
     }
 
-    return (new SetOfCards(new Cards(), 4)).addCards(discardedCards);
+    this.myCards.sortCards();
+
+    const discardedSet = (new SetOfCards(4)).addCards(discardedCards);
+    this.updateCardsStatus(discardedSet, 0, true);
+    return discardedSet;
+  }
+
+  private getSmallestSuits(cards: SetOfCards) {
+    let suitCount = [0, 0, 0, 0];
+    let suits = [0, 1, 2, 3];
+    // check how many cards in each suit
+    for (let n = 0; n < cards.cardCount; n++) {
+      suitCount[Math.floor(cards.cards[n] / 12)]++;
+    }
+    // see which suits are the smallest
+    Util.ArraySort2(suitCount, suits);
+    return {suitCount: suitCount, suits: suits};
   }
 }

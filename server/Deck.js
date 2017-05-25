@@ -7,16 +7,19 @@ var __extends = (this && this.__extends) || function (d, b) {
 var SetOfCards_1 = require("./SetOfCards");
 var Deck = (function (_super) {
     __extends(Deck, _super);
-    function Deck(cType, maxCards) {
-        _super.call(this, cType, maxCards);
-        this.cardType = cType;
+    function Deck(maxCards) {
+        _super.call(this, maxCards);
         this.reset();
     }
+    Deck.random = function () {
+        var x = Math.sin(Deck.seed++) * 10000;
+        return x - Math.floor(x);
+    };
     Deck.prototype.shuffle = function () {
         var m;
         var tmp;
         for (var n = 0; n < this.cardCount; n++) {
-            m = Math.floor(Math.random() * this.cardCount);
+            m = Math.floor(Deck.random() * this.cardCount);
             tmp = this.cards[n];
             this.cards[n] = this.cards[m];
             this.cards[m] = tmp;
@@ -43,6 +46,7 @@ var Deck = (function (_super) {
             this.cards[n] = n;
         this.shuffle();
     };
+    Deck.seed = 1;
     return Deck;
 }(SetOfCards_1["default"]));
 exports.__esModule = true;

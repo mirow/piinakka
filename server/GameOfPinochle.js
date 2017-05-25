@@ -6,7 +6,6 @@ var Player_1 = require('./Player');
 var Util_1 = require('./Util');
 var GameOfPinochle = (function () {
     function GameOfPinochle() {
-        this.cardType = new Cards_1["default"]();
         this.NumberOfPlayers = 4;
         this.stats = [];
         this.hela = false;
@@ -14,19 +13,19 @@ var GameOfPinochle = (function () {
         var trump;
         var CARDS_DEALT = 11;
         var MAX_CARDS = 15;
-        var deck = new Deck_1["default"](this.cardType, this.cardType.CARDSINDECK);
+        var deck = new Deck_1["default"](Cards_1["default"].CARDSINDECK);
         var player = [];
-        var cardsOnTable = new SetOfCards_1["default"](this.cardType, this.NumberOfPlayers);
-        var talon = new SetOfCards_1["default"](this.cardType, this.NumberOfPlayers);
-        var points = [0, 0, 0, 0];
-        var gamepoints = [];
+        var cardsOnTable = new SetOfCards_1["default"](this.NumberOfPlayers);
+        var talon = new SetOfCards_1["default"](this.NumberOfPlayers);
+        var totalPlayerPoints = [0, 0, 0, 0];
+        var gamePlayerPoints = [];
         var winningCards = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        var wCardCount = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        var winningCardCount = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         var starter; // player who wins the bid and starts taking tricks
         var current; // current player (who is playing a card)
         var dealer = null; // player who is dealing the cards
-        var bidwinner = null;
-        var keptbids = 0;
+        var bidWinner = null;
+        var keptBids = 0;
         for (var n = 0; n < this.NumberOfPlayers; n++) {
             player[n] = new Player_1["default"](2 << n, this.NumberOfPlayers, MAX_CARDS);
         }
@@ -41,20 +40,19 @@ var GameOfPinochle = (function () {
             starter = null;
             trump = null;
             var highestScore = 0;
+            // *** Deal cards and check for totalPlayerPoints for each player ****
             for (var n = dealer + 1; n < dealer + 1 + this.NumberOfPlayers; n++) {
                 var m = n % this.NumberOfPlayers;
-                player[m].newGame(2 << m);
+                player[m].newGame();
                 player[m].addCards(deck.dealCards(11), true);
                 player[m].myCards.sortCards();
-                gamepoints[m] = 0;
-                var mytrump = player[m].bidForTrump();
-                if (mytrump !== null && (player[m].points + player[m].trickPoints * 8 / 10 + player[m].potpoints) > highestScore) {
-                    trump = mytrump;
-                    highestScore = player[m].points + (player[m].trickPoints * 8 / 10) + player[m].potpoints;
-                    bidwinner = m;
+                gamePlayerPoints[m] = 0;
+                var myTrump = player[m].bidForTrump();
+                if (myTrump !== null && (player[m].points + player[m].trickPoints + player[m].potpoints) > highestScore) {
+                    trump = myTrump;
+                    highestScore = player[m].points + player[m].trickPoints + player[m].potpoints;
+                    bidWinner = m;
                 }
-                //        mytrump: boolean = player[n].checkForPoints(m);
-                //   console.log("Player "+m+" "+Cards.getSuitStr(mytrump)+": "+player[m].points);
                 console.log("Player " + m + " cards: " + player[m].myCards);
             }
             if (trump === null) {
@@ -65,59 +63,50 @@ var GameOfPinochle = (function () {
             talon.addCards(deck.dealCards(4));
             talon.sortCards();
             console.log("Talon cards: " + talon);
-            //      console.log("Talon cards: "+talon);
-            starter = bidwinner;
+            // **
+            starter = bidWinner;
             console.log("Player " + starter + " wins the bid for " +
-                Math.round(player[bidwinner].points) + "+" + Math.round(7 * player[bidwinner].trickPoints / 10) +
-                "+" + Math.round(player[bidwinner].potpoints) + "=" + Math.round(highestScore));
+                Math.round(player[bidWinner].points) + "+" + Math.round(7 * player[bidWinner].trickPoints / 10) +
+                "+" + Math.round(player[bidWinner].potpoints) + "=" + Math.round(highestScore));
             for (var i = 0; i < CARDS_DEALT; i++) {
-                if (Math.floor(player[starter].myCards.cards[i] / 12) == trump) {
-                    wCardCount[this.cardType.getRank(player[starter].myCards.cards[i])]++;
+                if (Cards_1["default"].getSuit(player[starter].myCards.cards[i]) == trump) {
+                    winningCardCount[Cards_1["default"].getRank(player[starter].myCards.cards[i])]++;
                 }
                 else {
-                    wCardCount[this.cardType.getRank(player[starter].myCards.cards[i]) + 6]++;
+                    winningCardCount[Cards_1["default"].getRank(player[starter].myCards.cards[i]) + 6]++;
                 }
             }
+            // ** talon winner picks up talon **
             player[starter].addCards(talon.cards, false);
             trump = player[starter].bidForTrump();
             player[starter].checkForPoints(trump);
+            // *** each player updates their card status info ***
             for (var n = dealer + 1; n < dealer + 1 + this.NumberOfPlayers; n++) {
                 var m = n % this.NumberOfPlayers;
                 if (m == starter) {
                     console.log("Player " + m + ": " + Math.round(player[m].points) +
-                        " with " + player[m].pointCards[trump] +
-                        ". Trump: " +
-                        this.cardType.suits[trump]);
-                    /*          console.log("Player " + starter + " wins the bid for " +
-                     player[m].points + "+" + player[m].trickPoints
-                     + "+" +player[m].potpoints +"=" + (bid) + " with " +
-                     player[m].pointCards[trump] +" ("+ player[m].posCards[trump]  + "). Trump: " +
-                     this.cardType.suits[trump]);
-                     */
-                    //          console.log("Shown cards: "+player[m].myCards.subset);
-                    for (var i = 0; i < this.NumberOfPlayers; i++)
-                        player[i].cardOwnerNotification(player[m].myCards.subset, 2 << m, true);
+                        " with " + player[m].pointCards[trump] + ". Trump: " + Cards_1["default"].suits[trump]);
                 }
                 else {
-                    var bestoffer = player[m].points;
-                    var tpoints = player[m].trickPoints;
+                    var bestOffer = player[m].points;
+                    var trickPoints = player[m].trickPoints;
                     player[m].checkForPoints(trump);
                     console.log("Player " + m + ": " + player[m].points +
                         (player[m].points > 0 ?
                             " with " + player[m].pointCards[trump] + ". " +
-                                (bestoffer > 0 ?
-                                    "Bid: " + Math.round(bestoffer) + "+" + Math.round(player[m].potpoints) + "+" + Math.round(tpoints) + "=" +
-                                        Math.round(bestoffer + tpoints + player[m].potpoints) : "") : ""));
-                    //          console.log("Shown cards: "+player[m].myCards.subset);
-                    for (var i = 0; i < this.NumberOfPlayers; i++)
-                        player[i].cardOwnerNotification(player[m].myCards.subset, 2 << m, false);
+                                (bestOffer > 0 ?
+                                    "Bid: " + Math.round(bestOffer) + "+" + Math.round(player[m].potpoints) + "+" + Math.round(trickPoints) + "=" +
+                                        Math.round(bestOffer + trickPoints + player[m].potpoints) : "") : ""));
                 }
-                gamepoints[m] = player[m].points;
+                for (var i = 0; i < this.NumberOfPlayers; i++)
+                    player[i].updateCardsStatus(player[m].myCards.subset, 2 << m, m == starter);
+                gamePlayerPoints[m] = player[m].points;
             }
+            // ** talon winner discards cards **
             var discarded = player[starter].discardCards(4, trump);
             console.log('Discarded: ' + discarded);
-            player[starter].myCards.sortCards();
             console.log('Starter (' + starter + ') cards: ' + player[starter].myCards);
+            // ** play rounds **
             console.log('Starting game ');
             for (var round = 1; round <= CARDS_DEALT; round++) {
                 console.log('Round ' + round);
@@ -127,80 +116,65 @@ var GameOfPinochle = (function () {
                 }
                 var highestCard = null;
                 var playersRemaining = Util_1["default"].power(2, this.NumberOfPlayers + 1) - 2; // 2 + 4 + 8 + 16;
+                var winningPlayer = starter;
+                // *** each player plays a card ***
                 for (var n = starter; n < starter + this.NumberOfPlayers; n++) {
                     current = n % this.NumberOfPlayers;
                     playersRemaining &= ~(2 << current);
                     var cardPlayed = player[current].playCard(cardsOnTable, trump, highestCard, playersRemaining);
                     cardsOnTable.addCard(cardPlayed);
                     console.log(current + " Cards on table: " + cardsOnTable);
+                    // ** notify other players that card has been played **
                     for (var i = 0; i < this.NumberOfPlayers; i++)
-                        player[i].cardStatusNotification(cardPlayed, 2 << current, highestCard, this.cardType.getSuit(cardsOnTable.
-                            cards[0]), trump, i);
+                        player[i].cardStatusNotification(cardPlayed, 2 << current, highestCard, Cards_1["default"].getSuit(cardsOnTable.cards[0]), trump);
                     if (cardsOnTable.isHigherCard(cardPlayed, highestCard, trump)) {
                         highestCard = cardPlayed;
+                        winningPlayer = current;
                     }
                 }
                 //        console.log(round+" Cards on table: " + cardsOnTable);
-                for (var n = 0; n < this.NumberOfPlayers; n++) {
-                    if (highestCard == cardsOnTable.cards[n]) {
-                        var winningPlayer = (n + starter) % this.NumberOfPlayers;
-                        var pts = this.calculatePoints(cardsOnTable, round);
-                        gamepoints[winningPlayer] += pts;
-                        console.log("Player " + winningPlayer + " wins round " +
-                            round + " for " + pts + " points, with " + this.cardType.cardString(highestCard));
-                        starter = winningPlayer;
-                        if (winningPlayer == bidwinner) {
-                            if (this.cardType.getSuit(highestCard) == trump) {
-                                winningCards[this.cardType.getRank(highestCard)] += pts;
-                            }
-                            else {
-                                winningCards[this.cardType.getRank(highestCard) + 6] += pts;
-                            }
-                        }
-                        break;
+                // ** calculate totalPlayerPoints for winner ***
+                var pts = cardsOnTable.calculatePoints(round);
+                gamePlayerPoints[winningPlayer] += pts;
+                console.log("Player " + winningPlayer + " wins round " +
+                    round + " for " + pts + " totalPlayerPoints, with " + Cards_1["default"].cardString(highestCard));
+                starter = winningPlayer;
+                // ** calculate stats for bidWinner **
+                if (winningPlayer == bidWinner) {
+                    if (Cards_1["default"].getSuit(highestCard) == trump) {
+                        winningCards[Cards_1["default"].getRank(highestCard)] += pts;
+                    }
+                    else {
+                        winningCards[Cards_1["default"].getRank(highestCard) + 6] += pts;
                     }
                 }
             }
+            // ** game over **
             for (var n = 0; n < this.NumberOfPlayers; n++) {
-                console.log("Player " + n + " points: " + gamepoints[n]);
-                if (n == bidwinner) {
-                    if (gamepoints[n] >= highestScore) {
-                        keptbids++;
+                console.log("Player " + n + " totalPlayerPoints: " + gamePlayerPoints[n]);
+                if (n == bidWinner) {
+                    if (gamePlayerPoints[n] >= highestScore) {
+                        keptBids++;
                     }
                 }
-                if (gamepoints[n] > player[n].points) {
-                    points[n] += gamepoints[n];
+                if (gamePlayerPoints[n] > player[n].points) {
+                    totalPlayerPoints[n] += gamePlayerPoints[n];
                 }
             }
         }
         for (var n = 0; n < this.NumberOfPlayers; n++) {
-            console.log("Player " + n + " total points: " + points[n]);
+            console.log("Player " + n + " total totalPlayerPoints: " + totalPlayerPoints[n]);
         }
         console.log(JSON.stringify(winningCards));
-        console.log(JSON.stringify(wCardCount));
+        console.log(JSON.stringify(winningCardCount));
         for (var n = 0; n < 12; n++) {
-            if (wCardCount[n] > 0) {
-                console.log(" " + this.cardType.getRankStr((n * 2) % 12) +
-                    " avg. points: " + winningCards[n] / wCardCount[n]);
+            if (winningCardCount[n] > 0) {
+                console.log(" " + Cards_1["default"].getRankStr((n * 2) % 12) +
+                    " avg. totalPlayerPoints: " + winningCards[n] / winningCardCount[n]);
             }
         }
-        console.log("Kept bids: " + keptbids);
+        console.log("Kept bids: " + keptBids);
     }
-    GameOfPinochle.prototype.calculatePoints = function (cardsOnTable, round) {
-        var sum = 0;
-        for (var n = 0; n < this.NumberOfPlayers; n++) {
-            if (cardsOnTable.cards[n] % 12 < 4) {
-                sum += 10;
-            }
-            else if (cardsOnTable.cards[n] % 12 < 8) {
-                sum += 5;
-            }
-        }
-        if (round == 12) {
-            sum += 10;
-        }
-        return sum;
-    };
     return GameOfPinochle;
 }());
 exports.__esModule = true;

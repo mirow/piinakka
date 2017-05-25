@@ -9,11 +9,9 @@ export default class SetOfCards extends Cards {
   cards: number[];
   sorted: boolean = false;
   subset: SetOfCards;
-  cardType: Cards;
 
-  constructor(cType: Cards, maxCards: number) {
+  constructor(maxCards: number) {
     super();
-    this.cardType = cType;
     this.cardCount = 0;
     this.maxCardCount = maxCards;
     this.cards = [];
@@ -98,7 +96,7 @@ export default class SetOfCards extends Cards {
       if (n > 0) {
         tmp += ", ";
       }
-      tmp += this.cardType.cardString(this.cards[n]) + " (" + this.cards[n] + ")";
+      tmp += Cards.cardString(this.cards[n]) + " (" + this.cards[n] + ")";
     }
     return tmp;
   }
@@ -109,6 +107,10 @@ export default class SetOfCards extends Cards {
     this.sorted = true;
   }
 
+  /**
+   * Sort cards by rank, putting trump cards last
+   * @param trump
+   */
   sortCardsByRank(trump) {
     let swapped: boolean;
     let n;
@@ -117,28 +119,20 @@ export default class SetOfCards extends Cards {
     do {
       swapped = false;
       for (let i = 0; i < n - 1; i++) {
-        if ((this.cardType.getSuit(this.cards[i + 1]) == trump) && (this.cardType.getSuit(this.cards[i]) != trump)) {
+        if ((Cards.getSuit(this.cards[i + 1]) == trump) && (Cards.getSuit(this.cards[i]) != trump)) {
           // don't swap, 'cos other is trump
-//          System.out.println("no swap " + cardType.cardString(cards[i]) + " <-> " + cardType.cardString(cards[i+1]));
-        } else if (this.cardType.getSuit(this.cards[i]) == trump && this.cardType.getSuit(this.cards[i + 1]) != trump) {
+        } else if (Cards.getSuit(this.cards[i]) == trump && Cards.getSuit(this.cards[i + 1]) != trump) {
           // this one is trump, other is not, so swap
-//           System.out.println("swapT " + cardType.cardString(cards[i]) + " <-> " + cardType.cardString(cards[i+1]));
           tmp = this.cards[i];
           this.cards[i] = this.cards[i + 1];
           this.cards[i + 1] = tmp;
           swapped = true;
-        } else if (this.cardType.getRank(this.cards[i]) < this.cardType.getRank(this.cards[i + 1])) {
+        } else if (Cards.getRank(this.cards[i]) < Cards.getRank(this.cards[i + 1])) {
           // neither are trump, or both are trump, so sort by rank
-//            System.out.println("swap " + cardType.cardString(this.cards[i]) + " <-> " + cardType.cardString(this.cards[i+1]));
-//            System.out.println("Ranks " + cardType.getRank(this.cards[i]) + " <-> " + cardType.getRank(this.cards[i+1]));
           tmp = this.cards[i];
           this.cards[i] = this.cards[i + 1];
           this.cards[i + 1] = tmp;
           swapped = true;
-        } else {
-//            System.out.println("noswap " + cardType.cardString(this.cards[i]) + " <-> " + cardType.cardString(this.cards[i+1]));
-//            System.out.println("Ranks " + cardType.getRank(this.cards[i]) + " <-> " + cardType.getRank(this.cards[i+1]));
-
         }
       }
       n--;
@@ -147,7 +141,7 @@ export default class SetOfCards extends Cards {
   }
 
   containsCards(targets: number[]) {
-    let tmp = new SetOfCards(this.cardType, 15);
+    let tmp = new SetOfCards(15);
 
     let cardsMissing = targets.length;
     for (let i = 0; i < targets.length; i++) {
@@ -165,7 +159,7 @@ export default class SetOfCards extends Cards {
   }
 
   containsOneOfEach(targets: number[][]) {
-    let tmp = new SetOfCards(this.cardType, 15);
+    let tmp = new SetOfCards(15);
 
     let cardsMissing = targets.length;
     let cardsFound: boolean = false;
@@ -212,11 +206,11 @@ export default class SetOfCards extends Cards {
     if (highestCard === null) {
       return true;
     } // this is the first card played, so it's the highest
-    if (this.cardType.getSuit(cardPlayed) == trump) { // this card is trump
-      return !!(this.cardType.getSuit(highestCard) != trump || this.cardType.getRank(cardPlayed) < this.cardType.getRank(highestCard));
+    if (Cards.getSuit(cardPlayed) == trump) { // this card is trump
+      return !!(Cards.getSuit(highestCard) != trump || Cards.getRank(cardPlayed) < Cards.getRank(highestCard));
     } else { // this card is not trump
-      return !!(this.cardType.getSuit(highestCard) != trump && this.cardType.getRank(cardPlayed) < this.cardType.getRank(highestCard) &&
-      this.cardType.getSuit(cardPlayed) == this.cardType.getSuit(highestCard));
+      return !!(Cards.getSuit(highestCard) != trump && Cards.getRank(cardPlayed) < Cards.getRank(highestCard) &&
+      Cards.getSuit(cardPlayed) == Cards.getSuit(highestCard));
     }
   }
 
@@ -230,7 +224,7 @@ export default class SetOfCards extends Cards {
       if (Math.floor(this.cards[n] / 12) == suit) {
         if (i == count) {
 //          console.log("getcardbysuit returning " +
-//                               this.cardType.cardString(this.cards[n]));
+//                               Cards.cardString(this.cards[n]));
           return this.cards[n];
         }
         i++;
@@ -238,5 +232,22 @@ export default class SetOfCards extends Cards {
     }
     return null;
   }
+
+
+  calculatePoints(round: number) {
+    let sum: number = 0;
+    for (let n: number = 0; n < this.cardCount; n++) {
+      if (this.cards[n] % 12 < 4) {
+        sum += 10;
+      } else if (this.cards[n] % 12 < 8) {
+        sum += 5;
+      }
+    }
+    if (round == 11) {
+      sum += 10;
+    }
+    return sum;
+  }
+
 }
 

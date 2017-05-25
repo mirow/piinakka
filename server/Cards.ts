@@ -2,54 +2,54 @@
 
 export default class Cards {
 
-  suits: String[] = ["♠", "♥", "♣", "♦"];
-  ranks: String[] = ["A", "10", "K", "Q", "J", "9"];
-  SUITS = 4;
-  PACKS = 2;
-  RANKS = 6;
-  CARDSINDECK = this.SUITS * this.RANKS * this.PACKS;
-  CARDSINSUIT = this.RANKS * this.PACKS;
+  static suits: String[] = ["♠", "♥", "♣", "♦"];
+  static ranks: String[] = ["A", "10", "K", "Q", "J", "9"];
+  static SUITS = 4;
+  static PACKS = 2;
+  static RANKS = 6;
+  static CARDSINDECK = Cards.SUITS * Cards.RANKS * Cards.PACKS;
+  static CARDSINSUIT = Cards.RANKS * Cards.PACKS;
 
   constructor() {
   }
 
-  getSuit(card) {
-    if (card >= 0 && card < this.CARDSINDECK) {
-      return Math.floor(card / this.CARDSINSUIT);
+  static getSuit(card) {
+    if (card >= 0 && card < Cards.CARDSINDECK) {
+      return Math.floor(card / Cards.CARDSINSUIT);
     } else {
       return null;
     }
   }
 
-  getRank(card) {
-    if (card >= 0 && card < this.CARDSINDECK) {
-      return Math.floor((card % this.CARDSINSUIT) / this.PACKS);
+  static getRank(card) {
+    if (card >= 0 && card < Cards.CARDSINDECK) {
+      return Math.floor((card % Cards.CARDSINSUIT) / Cards.PACKS);
     } else {
-      return this.RANKS;
+      return Cards.RANKS;
     } // lowest ranking card
   }
 
-  getSuitStr(card): String {
-    if (card >= 0 && card < this.CARDSINDECK) {
-      return this.suits[Math.floor(card / this.CARDSINSUIT)];
+  static getSuitStr(card): String {
+    if (card >= 0 && card < Cards.CARDSINDECK) {
+      return Cards.suits[Math.floor(card / Cards.CARDSINSUIT)];
     } else {
       return "(no card)";
     }
   }
 
-  getRankStr(card): String {
-    if (card >= 0 && card < this.CARDSINDECK) {
-      return this.ranks[Math.floor((card % this.CARDSINSUIT) / this.PACKS)];
+  static getRankStr(card): String {
+    if (card >= 0 && card < Cards.CARDSINDECK) {
+      return Cards.ranks[Math.floor((card % Cards.CARDSINSUIT) / Cards.PACKS)];
     } else {
       return "(no card)";
     }
   }
 
-  cardString(card: number): String {
+  static cardString(card: number): String {
     if (card === null) {
       return "(no card)";
     }
-    return this.getRankStr(card) + "" + this.getSuitStr(card);
+    return Cards.getRankStr(card) + "" + Cards.getSuitStr(card);
   }
 
 }

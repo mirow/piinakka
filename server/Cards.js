@@ -1,52 +1,52 @@
 'use strict';
 var Cards = (function () {
     function Cards() {
-        this.suits = ["♠", "♥", "♣", "♦"];
-        this.ranks = ["A", "10", "K", "Q", "J", "9"];
-        this.SUITS = 4;
-        this.PACKS = 2;
-        this.RANKS = 6;
-        this.CARDSINDECK = this.SUITS * this.RANKS * this.PACKS;
-        this.CARDSINSUIT = this.RANKS * this.PACKS;
     }
-    Cards.prototype.getSuit = function (card) {
-        if (card >= 0 && card < this.CARDSINDECK) {
-            return Math.floor(card / this.CARDSINSUIT);
+    Cards.getSuit = function (card) {
+        if (card >= 0 && card < Cards.CARDSINDECK) {
+            return Math.floor(card / Cards.CARDSINSUIT);
         }
         else {
             return null;
         }
     };
-    Cards.prototype.getRank = function (card) {
-        if (card >= 0 && card < this.CARDSINDECK) {
-            return Math.floor((card % this.CARDSINSUIT) / this.PACKS);
+    Cards.getRank = function (card) {
+        if (card >= 0 && card < Cards.CARDSINDECK) {
+            return Math.floor((card % Cards.CARDSINSUIT) / Cards.PACKS);
         }
         else {
-            return this.RANKS;
+            return Cards.RANKS;
         } // lowest ranking card
     };
-    Cards.prototype.getSuitStr = function (card) {
-        if (card >= 0 && card < this.CARDSINDECK) {
-            return this.suits[Math.floor(card / this.CARDSINSUIT)];
+    Cards.getSuitStr = function (card) {
+        if (card >= 0 && card < Cards.CARDSINDECK) {
+            return Cards.suits[Math.floor(card / Cards.CARDSINSUIT)];
         }
         else {
             return "(no card)";
         }
     };
-    Cards.prototype.getRankStr = function (card) {
-        if (card >= 0 && card < this.CARDSINDECK) {
-            return this.ranks[Math.floor((card % this.CARDSINSUIT) / this.PACKS)];
+    Cards.getRankStr = function (card) {
+        if (card >= 0 && card < Cards.CARDSINDECK) {
+            return Cards.ranks[Math.floor((card % Cards.CARDSINSUIT) / Cards.PACKS)];
         }
         else {
             return "(no card)";
         }
     };
-    Cards.prototype.cardString = function (card) {
+    Cards.cardString = function (card) {
         if (card === null) {
             return "(no card)";
         }
-        return this.getRankStr(card) + "" + this.getSuitStr(card);
+        return Cards.getRankStr(card) + "" + Cards.getSuitStr(card);
     };
+    Cards.suits = ["♠", "♥", "♣", "♦"];
+    Cards.ranks = ["A", "10", "K", "Q", "J", "9"];
+    Cards.SUITS = 4;
+    Cards.PACKS = 2;
+    Cards.RANKS = 6;
+    Cards.CARDSINDECK = Cards.SUITS * Cards.RANKS * Cards.PACKS;
+    Cards.CARDSINSUIT = Cards.RANKS * Cards.PACKS;
     return Cards;
 }());
 exports.__esModule = true;

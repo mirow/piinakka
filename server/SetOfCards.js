@@ -8,10 +8,9 @@ var Cards_1 = require('./Cards');
 var Util_1 = require('./Util');
 var SetOfCards = (function (_super) {
     __extends(SetOfCards, _super);
-    function SetOfCards(cType, maxCards) {
+    function SetOfCards(maxCards) {
         _super.call(this);
         this.sorted = false;
-        this.cardType = cType;
         this.cardCount = 0;
         this.maxCardCount = maxCards;
         this.cards = [];
@@ -90,7 +89,7 @@ var SetOfCards = (function (_super) {
             if (n > 0) {
                 tmp += ", ";
             }
-            tmp += this.cardType.cardString(this.cards[n]) + " (" + this.cards[n] + ")";
+            tmp += Cards_1["default"].cardString(this.cards[n]) + " (" + this.cards[n] + ")";
         }
         return tmp;
     };
@@ -99,6 +98,10 @@ var SetOfCards = (function (_super) {
         Util_1["default"].ArraySort(this.cards, this.cardCount);
         this.sorted = true;
     };
+    /**
+     * Sort cards by rank, putting trump cards last
+     * @param trump
+     */
     SetOfCards.prototype.sortCardsByRank = function (trump) {
         var swapped;
         var n;
@@ -107,26 +110,21 @@ var SetOfCards = (function (_super) {
         do {
             swapped = false;
             for (var i = 0; i < n - 1; i++) {
-                if ((this.cardType.getSuit(this.cards[i + 1]) == trump) && (this.cardType.getSuit(this.cards[i]) != trump)) {
+                if ((Cards_1["default"].getSuit(this.cards[i + 1]) == trump) && (Cards_1["default"].getSuit(this.cards[i]) != trump)) {
                 }
-                else if (this.cardType.getSuit(this.cards[i]) == trump && this.cardType.getSuit(this.cards[i + 1]) != trump) {
+                else if (Cards_1["default"].getSuit(this.cards[i]) == trump && Cards_1["default"].getSuit(this.cards[i + 1]) != trump) {
                     // this one is trump, other is not, so swap
-                    //           System.out.println("swapT " + cardType.cardString(cards[i]) + " <-> " + cardType.cardString(cards[i+1]));
                     tmp = this.cards[i];
                     this.cards[i] = this.cards[i + 1];
                     this.cards[i + 1] = tmp;
                     swapped = true;
                 }
-                else if (this.cardType.getRank(this.cards[i]) < this.cardType.getRank(this.cards[i + 1])) {
+                else if (Cards_1["default"].getRank(this.cards[i]) < Cards_1["default"].getRank(this.cards[i + 1])) {
                     // neither are trump, or both are trump, so sort by rank
-                    //            System.out.println("swap " + cardType.cardString(this.cards[i]) + " <-> " + cardType.cardString(this.cards[i+1]));
-                    //            System.out.println("Ranks " + cardType.getRank(this.cards[i]) + " <-> " + cardType.getRank(this.cards[i+1]));
                     tmp = this.cards[i];
                     this.cards[i] = this.cards[i + 1];
                     this.cards[i + 1] = tmp;
                     swapped = true;
-                }
-                else {
                 }
             }
             n--;
@@ -134,7 +132,7 @@ var SetOfCards = (function (_super) {
         this.sorted = true;
     };
     SetOfCards.prototype.containsCards = function (targets) {
-        var tmp = new SetOfCards(this.cardType, 15);
+        var tmp = new SetOfCards(15);
         var cardsMissing = targets.length;
         for (var i = 0; i < targets.length; i++) {
             if (this.cardExists(targets[i])) {
@@ -148,7 +146,7 @@ var SetOfCards = (function (_super) {
         return cardsMissing;
     };
     SetOfCards.prototype.containsOneOfEach = function (targets) {
-        var tmp = new SetOfCards(this.cardType, 15);
+        var tmp = new SetOfCards(15);
         var cardsMissing = targets.length;
         var cardsFound = false;
         for (var i = 0; i < targets.length; i++) {
@@ -190,12 +188,12 @@ var SetOfCards = (function (_super) {
         if (highestCard === null) {
             return true;
         } // this is the first card played, so it's the highest
-        if (this.cardType.getSuit(cardPlayed) == trump) {
-            return !!(this.cardType.getSuit(highestCard) != trump || this.cardType.getRank(cardPlayed) < this.cardType.getRank(highestCard));
+        if (Cards_1["default"].getSuit(cardPlayed) == trump) {
+            return !!(Cards_1["default"].getSuit(highestCard) != trump || Cards_1["default"].getRank(cardPlayed) < Cards_1["default"].getRank(highestCard));
         }
         else {
-            return !!(this.cardType.getSuit(highestCard) != trump && this.cardType.getRank(cardPlayed) < this.cardType.getRank(highestCard) &&
-                this.cardType.getSuit(cardPlayed) == this.cardType.getSuit(highestCard));
+            return !!(Cards_1["default"].getSuit(highestCard) != trump && Cards_1["default"].getRank(cardPlayed) < Cards_1["default"].getRank(highestCard) &&
+                Cards_1["default"].getSuit(cardPlayed) == Cards_1["default"].getSuit(highestCard));
         }
     };
     SetOfCards.prototype.getCardBySuit = function (suit, count) {
@@ -208,13 +206,28 @@ var SetOfCards = (function (_super) {
             if (Math.floor(this.cards[n] / 12) == suit) {
                 if (i == count) {
                     //          console.log("getcardbysuit returning " +
-                    //                               this.cardType.cardString(this.cards[n]));
+                    //                               Cards.cardString(this.cards[n]));
                     return this.cards[n];
                 }
                 i++;
             }
         }
         return null;
+    };
+    SetOfCards.prototype.calculatePoints = function (round) {
+        var sum = 0;
+        for (var n = 0; n < this.cardCount; n++) {
+            if (this.cards[n] % 12 < 4) {
+                sum += 10;
+            }
+            else if (this.cards[n] % 12 < 8) {
+                sum += 5;
+            }
+        }
+        if (round == 11) {
+            sum += 10;
+        }
+        return sum;
     };
     return SetOfCards;
 }(Cards_1["default"]));
