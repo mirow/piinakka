@@ -12,7 +12,7 @@ export default class Deck extends SetOfCards {
   }
 
   static random() {
-    var x = Math.sin(Deck.seed++) * 10000;
+    var x = Math.cos(Deck.seed++) * 10000;
     return x - Math.floor(x);
   }
 

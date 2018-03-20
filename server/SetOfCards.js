@@ -1,40 +1,33 @@
 'use strict';
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
-var Cards_1 = require('./Cards');
-var Util_1 = require('./Util');
-var SetOfCards = (function (_super) {
-    __extends(SetOfCards, _super);
+exports.__esModule = true;
+var Cards_1 = require("./Cards");
+var Util_1 = require("./Util");
+var SetOfCards = /** @class */ (function () {
     function SetOfCards(maxCards) {
-        _super.call(this);
         this.sorted = false;
         this.cardCount = 0;
         this.maxCardCount = maxCards;
         this.cards = [];
-        for (var n = 0; n < this.maxCardCount; n++)
-            this.cards[n] = null;
     }
-    SetOfCards.prototype.SetOfCards = function (newCards, cCount) {
-        this.maxCardCount = newCards.length;
-        this.cardCount = cCount;
-        this.cards = newCards;
-        for (var n = cCount; n < this.maxCardCount; n++)
-            this.cards[n] = null;
+    SetOfCards.dummySet = function (count, maxCount) {
+        var set = new SetOfCards(maxCount);
+        for (var n = 0; n < count; n++)
+            set.cards[n] = -1;
+        set.cardCount = count;
+        return set;
     };
     SetOfCards.prototype.addCard = function (cardValue) {
         if (this.cardCount == this.maxCardCount) {
+            console.log('tried to add card, but already had full amount ' + this.maxCardCount);
             return false;
         }
-        this.cards[this.cardCount] = cardValue;
-        this.cardCount++;
+        this.cards[this.cardCount++] = cardValue;
         this.sorted = false;
         return true;
     };
     SetOfCards.prototype.addSetOfCards = function (newCards) {
         if (this.cardCount == this.maxCardCount) {
+            console.log('tried to add card, but already had full amount ' + this.maxCardCount);
             return false;
         }
         i: for (var i = 0; i < newCards.cardCount; i++) {
@@ -111,6 +104,7 @@ var SetOfCards = (function (_super) {
             swapped = false;
             for (var i = 0; i < n - 1; i++) {
                 if ((Cards_1["default"].getSuit(this.cards[i + 1]) == trump) && (Cards_1["default"].getSuit(this.cards[i]) != trump)) {
+                    // don't swap, 'cos other is trump
                 }
                 else if (Cards_1["default"].getSuit(this.cards[i]) == trump && Cards_1["default"].getSuit(this.cards[i + 1]) != trump) {
                     // this one is trump, other is not, so swap
@@ -131,7 +125,7 @@ var SetOfCards = (function (_super) {
         } while (swapped);
         this.sorted = true;
     };
-    SetOfCards.prototype.containsCards = function (targets) {
+    SetOfCards.prototype.containsCards = function (targets, meldCards) {
         var tmp = new SetOfCards(15);
         var cardsMissing = targets.length;
         for (var i = 0; i < targets.length; i++) {
@@ -141,11 +135,12 @@ var SetOfCards = (function (_super) {
             }
         }
         if (cardsMissing == 0) {
-            this.subset.addSetOfCards(tmp);
+            meldCards.addSetOfCards(tmp);
+            //        System.out.println("Adding " +tmp);
         }
         return cardsMissing;
     };
-    SetOfCards.prototype.containsOneOfEach = function (targets) {
+    SetOfCards.prototype.containsOneOfEach = function (targets, meldCards) {
         var tmp = new SetOfCards(15);
         var cardsMissing = targets.length;
         var cardsFound = false;
@@ -159,9 +154,11 @@ var SetOfCards = (function (_super) {
                     break; // card found, no need to check rest of set
                 }
             }
+            //        if (!cardsFound) return false; // no cards in set were found
         }
         if (cardsMissing == 0) {
-            this.subset.addSetOfCards(tmp);
+            meldCards.addSetOfCards(tmp);
+            //        System.out.println("Adding " +tmp);
         }
         return cardsMissing; // at least one card in each set was found
     };
@@ -181,18 +178,17 @@ var SetOfCards = (function (_super) {
     };
     SetOfCards.prototype.clear = function () {
         this.cardCount = 0;
-        for (var n = 0; n < this.maxCardCount; n++)
-            this.cards[n] = null;
+        this.cards = [];
     };
     SetOfCards.prototype.isHigherCard = function (cardPlayed, highestCard, trump) {
         if (highestCard === null) {
             return true;
         } // this is the first card played, so it's the highest
         if (Cards_1["default"].getSuit(cardPlayed) == trump) {
-            return !!(Cards_1["default"].getSuit(highestCard) != trump || Cards_1["default"].getRank(cardPlayed) < Cards_1["default"].getRank(highestCard));
+            return (Cards_1["default"].getSuit(highestCard) != trump || Cards_1["default"].getRank(cardPlayed) < Cards_1["default"].getRank(highestCard));
         }
         else {
-            return !!(Cards_1["default"].getSuit(highestCard) != trump && Cards_1["default"].getRank(cardPlayed) < Cards_1["default"].getRank(highestCard) &&
+            return (Cards_1["default"].getSuit(highestCard) != trump && Cards_1["default"].getRank(cardPlayed) < Cards_1["default"].getRank(highestCard) &&
                 Cards_1["default"].getSuit(cardPlayed) == Cards_1["default"].getSuit(highestCard));
         }
     };
@@ -230,7 +226,6 @@ var SetOfCards = (function (_super) {
         return sum;
     };
     return SetOfCards;
-}(Cards_1["default"]));
-exports.__esModule = true;
+}());
 exports["default"] = SetOfCards;
 //# sourceMappingURL=SetOfCards.js.map

@@ -1,5 +1,6 @@
 "use strict";
-var Util = (function () {
+exports.__esModule = true;
+var Util = /** @class */ (function () {
     function Util() {
     }
     /**
@@ -38,7 +39,7 @@ var Util = (function () {
      * @param arr2 int[] array that is also arranged
      * @return int[][] sorted arrays
      */
-    Util.ArraySort2 = function (arr, arr2) {
+    Util.SortCardsByOdds = function (arr, arr2) {
         var swapped;
         var n;
         var tmp;
@@ -62,14 +63,7 @@ var Util = (function () {
         //     return new int[][] {arr, arr2};
         return;
     };
-    Util.power = function (base, pow) {
-        var res = 1;
-        for (var n = 0; n < pow; n++)
-            res *= base;
-        return res;
-    };
     return Util;
 }());
-exports.__esModule = true;
 exports["default"] = Util;
 //# sourceMappingURL=Util.js.map

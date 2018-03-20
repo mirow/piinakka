@@ -1,8 +1,9 @@
 'use strict';
-var Cards_1 = require('./Cards');
-var SetOfCards_1 = require('./SetOfCards');
-var Util_1 = require('./Util');
-var Player = (function () {
+exports.__esModule = true;
+var Cards_1 = require("./Cards");
+var SetOfCards_1 = require("./SetOfCards");
+var Util_1 = require("./Util");
+var Player = /** @class */ (function () {
     /*
      status of cards:
      0 - card already played
@@ -15,23 +16,28 @@ var Player = (function () {
   
      */
     function Player(playerId, numberOfPlayers, maxCards) {
+        this.oddsLimit = 50;
         this.playerStrategy = 0;
         this.DEBUG = false;
         this.DEBUG2 = false;
-        this.LOGICDEBUG = false;
+        this.LOGIC_DEBUG = false;
         this.pointCards = [];
         this.posCards = [];
-        //  int[] trickValues = { 16, 20, 14, 10, 5, 2, 14, 7, 2, 1, 0, 0 };
-        //   int[] trickValues = { 16, 18, 15, 11, 4, 3, 13, 7, 0, 1, 0, 0 };
-        //   int[] trickValues = { 23, 33, 18, 12, 9, 8, 20, 4, 2, 1, 0, 0 };
-        // Kept bids: 711
-        this.trickValues = [24, 34, 18, 13, 9, 8, 20, 4, 2, 1, 0, 0];
-        // Kept bids: 567
-        this.potentialPts = [[108, 9], [207, 34]];
-        this.points = 0;
-        this.potpoints = 0;
+        /*
+        // 4 player game
+        trickValues: number[] = [20, 4, 2, 1, 0, 0];
+        trumpTrickValues: number[] = [24, 34, 18, 13, 9, 8];
+        */
+        // 3 player game
+        this.trickValues = [15, 6, 1, 0, 0, 0];
+        this.trumpTrickValues = [26, 25, 13, 15, 9, 14];
+        this.potentialPts = [[0.108, 0.009], [0.207, 0.034]];
+        this.meldPoints = 0;
+        this.potentialPoints = 0;
         this.trickPoints = 0;
         this.tmpTrump = null;
+        this.myBid = 0;
+        this.stack = 0;
         this.spaderdubbel = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
         this.spaderdh = [
             [
@@ -302,17 +308,17 @@ var Player = (function () {
             ]
         ];
         this.NumberOfPlayers = numberOfPlayers;
-        this.allPlayersBITMASK = Util_1["default"].power(2, numberOfPlayers + 1) - 2;
-        this.otherplayersBITMASK = this.allPlayersBITMASK & (~playerId);
-        //console.log('bitmasks: ' + this.allPlayersBITMASK + " " + this.otherplayersBITMASK);
+        this.allPlayersBITMASK = Math.pow(2, numberOfPlayers + 1) - 2;
+        this.otherPlayersBITMASK = this.allPlayersBITMASK & (~playerId);
+        //console.log('bitmasks: ' + this.allPlayersBITMASK + " " + this.otherPlayersBITMASK);
         this.myCards = new SetOfCards_1["default"](maxCards);
         this.cardStatus = new Array(Cards_1["default"].CARDSINDECK);
         this.newGame();
         this.myPlayerID = playerId;
-        this.myCards.subset = new SetOfCards_1["default"](maxCards);
+        this.meldCards = new SetOfCards_1["default"](maxCards);
     }
-    Player.prototype.addpoints = function (pts, message, statID) {
-        this.points += pts;
+    Player.prototype.addMeldPoints = function (pts, message, statID) {
+        this.meldPoints += pts;
         if (this.pointCards[this.tmpTrump] != "") {
             this.pointCards[this.tmpTrump] += ", ";
         }
@@ -322,11 +328,11 @@ var Player = (function () {
          stats[statID]++;
          */
     };
-    Player.prototype.addPotentialpoints = function (pts, Stringmessage, tmpCardsMissing, possibilities) {
+    Player.prototype.addPotentialMeldPoints = function (pts, Stringmessage, tmpCardsMissing, possibilities) {
         if (tmpCardsMissing > 2) {
             return;
         }
-        this.potpoints += pts * this.potentialPts[possibilities - 1][tmpCardsMissing - 1] / 1000;
+        this.potentialPoints += pts * this.potentialPts[possibilities - 1][tmpCardsMissing - 1];
         /*    if (posCards[tmpTrump]!="") posCards[tmpTrump]+=", ";
          posCards[tmpTrump]+=message+ " ("+tmpCardsMissing+"/"+tmpCardsMissing*possibilities+"): " + (pts * potentialPts[possibilities-1][tmpCardsMissing-1] / 1000);
          */
@@ -340,392 +346,430 @@ var Player = (function () {
      * The player's bid is stored in CardPlayer.points.
      * @return trump integer The best suit.
      */
-    Player.prototype.bidForTrump = function () {
+    Player.prototype.findBestTrump = function (storePoints, potential) {
+        if (storePoints === void 0) { storePoints = true; }
+        if (potential === void 0) { potential = true; }
         var canBeTrump = false;
-        var maxPoints = 0;
+        var maxBid = 0;
         var maxTrick = 0;
         var maxPot = 0;
         var bestTrump = null;
         // ** calculate which suit as trump gives the most points
         for (var suit = 0; suit < 4; suit++) {
-            canBeTrump = this.checkForPoints(suit);
-            this.checkTrickPoints(suit);
-            if (canBeTrump && (this.points + this.trickPoints + this.potpoints > maxPoints)) {
+            canBeTrump = this.checkForMeldPoints(suit);
+            this.trickPoints = this.calculatePotentialTrickPoints(suit);
+            //      console.log('Suit ' + suit + ': (' + canBeTrump + ')' + this.meldPoints + ' +' + this.trickPoints + ' +' +
+            //        (potential ? this.potentialPoints : 0) + '=' + (this.meldPoints + this.trickPoints + (potential ? this.potentialPoints : 0)) + ' points');
+            if (canBeTrump && (this.meldPoints + this.trickPoints + (potential ? this.potentialPoints : 0) > maxBid)) {
                 bestTrump = suit;
-                maxPoints = this.points + this.trickPoints + this.potpoints;
+                maxBid = this.meldPoints + this.trickPoints + (potential ? this.potentialPoints : 0);
                 maxTrick = this.trickPoints;
-                maxPot = this.potpoints;
+                maxPot = (potential ? this.potentialPoints : 0);
             }
         }
-        this.points = maxPoints - maxTrick - maxPot;
-        this.potpoints = maxPot;
+        this.meldPoints = maxBid - maxTrick - maxPot;
+        this.potentialPoints = maxPot;
+        if (storePoints) {
+            if (bestTrump !== null) {
+                this.myBid = Math.floor((this.meldPoints + this.trickPoints + this.potentialPoints) / 5) * 5;
+            }
+            else {
+                this.myBid = 0;
+            }
+            //      console.log('Setting player bid to ' + this.myBid);
+        }
         return bestTrump;
     };
-    Player.prototype.checkTrickPoints = function (trump) {
-        this.trickPoints = 0;
+    Player.prototype.calculatePotentialTrickPoints = function (trump) {
+        var trickPoints = 0;
         for (var i = 0; i < this.myCards.cardCount; i++) {
             if (Cards_1["default"].getSuit(this.myCards.cards[i]) == trump) {
-                this.trickPoints += this.trickValues[Cards_1["default"].getRank(this.myCards.cards[i])];
+                trickPoints += this.trumpTrickValues[Cards_1["default"].getRank(this.myCards.cards[i])];
             }
             else {
-                this.trickPoints += this.trickValues[Cards_1["default"].getRank(this.myCards.cards[i]) + 6];
+                trickPoints += this.trickValues[Cards_1["default"].getRank(this.myCards.cards[i])];
             }
         }
+        return trickPoints * 0.7;
     };
-    Player.prototype.checkForPoints = function (trump) {
-        this.myCards.subset.clear();
+    /**
+     * Calculate how many meld points the player has
+     * @param trump
+     * @param updatePotential Also update potential points
+     * @return {boolean}
+     */
+    Player.prototype.checkForMeldPoints = function (trump, updatePotential) {
+        if (updatePotential === void 0) { updatePotential = true; }
+        this.meldCards.clear();
         this.tmpTrump = trump;
         this.pointCards[this.tmpTrump] = "";
-        this.points = 0;
-        this.potpoints = 0;
+        this.meldPoints = 0;
+        updatePotential ? this.potentialPoints = 0 : null;
         var canBeTrump = false;
         var dubbelHela = false;
+        var spaderDubbelHela = false;
+        var ruterDubbelHela = false;
+        var hjärterDubbelHela = false;
+        var klöverDubbelHela = false;
         var piinakka = null;
         var tmpCardsMissing = 0;
-        if (trump == 0) {
-            tmpCardsMissing = this.myCards.containsCards(this.spaderdubbel);
+        var SPADER = 0;
+        var HJÄRTER = 1;
+        var KLÖVER = 2;
+        var RUTER = 3;
+        if (trump == SPADER) {
+            tmpCardsMissing = this.myCards.containsCards(this.spaderdubbel, this.meldCards);
             if (tmpCardsMissing == 0) {
-                this.addpoints(1000, "dubbel spaderpiinakka!", 1);
-                piinakka = 0;
+                this.addMeldPoints(1000, "dubbel spaderpiinakka!", 1);
+                piinakka = SPADER;
                 canBeTrump = true;
             }
             else {
-                this.addPotentialpoints(1000, "dubbel spaderpiinakka!", tmpCardsMissing, 1);
-                tmpCardsMissing = this.myCards.containsOneOfEach(this.spaderdh); // spaderpiinakka med dubbel hela
+                this.addPotentialMeldPoints(1000, "dubbel spaderpiinakka!", tmpCardsMissing, 1);
+                tmpCardsMissing = this.myCards.containsOneOfEach(this.spaderdh, this.meldCards); // spaderpiinakka med dubbel hela
                 if (tmpCardsMissing == 0) {
-                    this.addpoints(250, "spaderpiinakka med dubbel hela", 2);
+                    this.addMeldPoints(250, "spaderpiinakka med dubbel hela", 2);
                     canBeTrump = true;
-                    piinakka = 0;
+                    piinakka = SPADER;
                 }
                 else {
-                    this.addPotentialpoints(250, "spaderpiinakka med dubbel hela!", tmpCardsMissing, 1);
-                    tmpCardsMissing = this.myCards.containsOneOfEach(this.spaderpiinakka); // spaderpiinakka
+                    this.addPotentialMeldPoints(250, "spaderpiinakka med dubbel hela!", tmpCardsMissing, 1);
+                    tmpCardsMissing = this.myCards.containsOneOfEach(this.spaderpiinakka, this.meldCards); // spaderpiinakka
                     if (tmpCardsMissing == 0) {
-                        this.addpoints(150, "spaderpiinakka", 16);
+                        this.addMeldPoints(150, "spaderpiinakka", 16);
                         canBeTrump = true;
-                        piinakka = 0;
+                        piinakka = SPADER;
                     }
                     else {
-                        this.addPotentialpoints(150, "spaderpiinakka", tmpCardsMissing, 2);
+                        this.addPotentialMeldPoints(150, "spaderpiinakka", tmpCardsMissing, 2);
                     }
                 }
             }
         }
-        else if (trump == 1) {
-            tmpCardsMissing = this.myCards.containsCards(this.hjarterdubbel);
+        else if (trump == HJÄRTER) {
+            tmpCardsMissing = this.myCards.containsCards(this.hjarterdubbel, this.meldCards);
             if (tmpCardsMissing == 0) {
-                this.addpoints(1000, "dubbel hjärterpiinakka!", 1);
-                piinakka = 1;
+                this.addMeldPoints(1000, "dubbel hjärterpiinakka!", 1);
+                piinakka = HJÄRTER;
                 canBeTrump = true;
             }
             else {
-                this.addPotentialpoints(1000, "dubbel hj�rterpiinakka!", tmpCardsMissing, 1);
-                tmpCardsMissing = this.myCards.containsOneOfEach(this.hjarterdh); // spaderpiinakka med dubbel hela
+                updatePotential ? this.addPotentialMeldPoints(1000, "dubbel hj�rterpiinakka!", tmpCardsMissing, 1) : null;
+                tmpCardsMissing = this.myCards.containsOneOfEach(this.hjarterdh, this.meldCards); // spaderpiinakka med dubbel hela
                 if (tmpCardsMissing == 0) {
-                    this.addpoints(250, "hjärterpiinakka med dubbel hela", 2);
+                    this.addMeldPoints(250, "hjärterpiinakka med dubbel hela", 2);
                     canBeTrump = true;
-                    piinakka = 1;
+                    piinakka = HJÄRTER;
                 }
                 else {
-                    this.addPotentialpoints(250, "hj�rterpiinakka med dubbel hela", tmpCardsMissing, 1);
-                    tmpCardsMissing = this.myCards.containsOneOfEach(this.hjarterpiinakka); // spaderpiinakka
+                    updatePotential ? this.addPotentialMeldPoints(250, "hj�rterpiinakka med dubbel hela", tmpCardsMissing, 1) : null;
+                    tmpCardsMissing = this.myCards.containsOneOfEach(this.hjarterpiinakka, this.meldCards); // spaderpiinakka
                     if (tmpCardsMissing == 0) {
-                        this.addpoints(150, "hjärterpiinakka", 16);
+                        this.addMeldPoints(150, "hjärterpiinakka", 16);
                         canBeTrump = true;
-                        piinakka = 1;
+                        piinakka = HJÄRTER;
                     }
                     else {
-                        this.addPotentialpoints(150, "hjärterpiinakka", tmpCardsMissing, 2);
+                        updatePotential ? this.addPotentialMeldPoints(150, "hjärterpiinakka", tmpCardsMissing, 2) : null;
                     }
                 }
             }
         }
-        else if (trump == 2) {
-            tmpCardsMissing = this.myCards.containsCards(this.kloverdubbel);
+        else if (trump == KLÖVER) {
+            tmpCardsMissing = this.myCards.containsCards(this.kloverdubbel, this.meldCards);
             if (tmpCardsMissing == 0) {
-                this.addpoints(1000, "dubbel klöverpiinakka!", 1);
-                piinakka = 2;
+                this.addMeldPoints(1000, "dubbel klöverpiinakka!", 1);
+                piinakka = KLÖVER;
                 canBeTrump = true;
             }
             else {
-                this.addPotentialpoints(1000, "dubbel klöverpiinakka", tmpCardsMissing, 1);
-                tmpCardsMissing = this.myCards.containsOneOfEach(this.kloverdh); // spaderpiinakka med dubbel hela
+                updatePotential ? this.addPotentialMeldPoints(1000, "dubbel klöverpiinakka", tmpCardsMissing, 1) : null;
+                tmpCardsMissing = this.myCards.containsOneOfEach(this.kloverdh, this.meldCards); // spaderpiinakka med dubbel hela
                 if (tmpCardsMissing == 0) {
-                    this.addpoints(250, "klöverpiinakka med dubbel hela", 2);
+                    this.addMeldPoints(250, "klöverpiinakka med dubbel hela", 2);
                     canBeTrump = true;
-                    piinakka = 2;
+                    piinakka = KLÖVER;
                 }
                 else {
-                    this.addPotentialpoints(250, "klöverpiinakka med dubbel hela", tmpCardsMissing, 1);
-                    tmpCardsMissing = this.myCards.containsOneOfEach(this.kloverpiinakka); // spaderpiinakka
+                    updatePotential ? this.addPotentialMeldPoints(250, "klöverpiinakka med dubbel hela", tmpCardsMissing, 1) : null;
+                    tmpCardsMissing = this.myCards.containsOneOfEach(this.kloverpiinakka, this.meldCards); // spaderpiinakka
                     if (tmpCardsMissing == 0) {
-                        this.addpoints(150, "klöverpiinakka", 16);
+                        this.addMeldPoints(150, "klöverpiinakka", 16);
                         canBeTrump = true;
-                        piinakka = 2;
+                        piinakka = KLÖVER;
                     }
                     else {
-                        this.addPotentialpoints(150, "klöverpiinakka ", tmpCardsMissing, 2);
+                        updatePotential ? this.addPotentialMeldPoints(150, "klöverpiinakka ", tmpCardsMissing, 2) : null;
                     }
                 }
             }
         }
-        else if (trump == 3) {
-            tmpCardsMissing = this.myCards.containsCards(this.ruterdubbel);
+        else if (trump == RUTER) {
+            tmpCardsMissing = this.myCards.containsCards(this.ruterdubbel, this.meldCards);
             if (tmpCardsMissing == 0) {
-                this.addpoints(1000, "dubbel ruterpiinakka!", 1);
-                piinakka = 3;
+                this.addMeldPoints(1000, "dubbel ruterpiinakka!", 1);
+                piinakka = RUTER;
                 canBeTrump = true;
             }
             else {
-                this.addPotentialpoints(1000, "dubbel ruterpiinakka ", tmpCardsMissing, 1);
-                tmpCardsMissing = this.myCards.containsOneOfEach(this.ruterdh); // spaderpiinakka med dubbel hela
+                updatePotential ? this.addPotentialMeldPoints(1000, "dubbel ruterpiinakka ", tmpCardsMissing, 1) : null;
+                tmpCardsMissing = this.myCards.containsOneOfEach(this.ruterdh, this.meldCards); // spaderpiinakka med dubbel hela
                 if (tmpCardsMissing == 0) {
-                    this.addpoints(250, "ruterpiinakka med dubbel hela", 2);
+                    this.addMeldPoints(250, "ruterpiinakka med dubbel hela", 2);
                     canBeTrump = true;
-                    piinakka = 3;
+                    piinakka = RUTER;
                 }
                 else {
-                    this.addPotentialpoints(250, "ruterpiinakka med dubbel hela", tmpCardsMissing, 1);
-                    tmpCardsMissing = this.myCards.containsOneOfEach(this.ruterpiinakka); // spaderpiinakka
+                    updatePotential ? this.addPotentialMeldPoints(250, "ruterpiinakka med dubbel hela", tmpCardsMissing, 1) : null;
+                    tmpCardsMissing = this.myCards.containsOneOfEach(this.ruterpiinakka, this.meldCards); // spaderpiinakka
                     if (tmpCardsMissing == 0) {
-                        this.addpoints(150, "ruterpiinakka", 16);
+                        this.addMeldPoints(150, "ruterpiinakka", 16);
                         canBeTrump = true;
-                        piinakka = 3;
+                        piinakka = RUTER;
                     }
                     else {
-                        this.addPotentialpoints(150, "ruterpiinakka ", tmpCardsMissing, 2);
+                        updatePotential ? this.addPotentialMeldPoints(150, "ruterpiinakka ", tmpCardsMissing, 2) : null;
                     }
                 }
             }
         }
-        tmpCardsMissing = this.myCards.containsCards(this.spader2x);
-        if (piinakka != 0) {
-            if (trump == 0) {
+        tmpCardsMissing = this.myCards.containsCards(this.spader2x, this.meldCards);
+        if (piinakka != SPADER) {
+            if (trump == SPADER) {
                 if (tmpCardsMissing == 0) {
-                    this.addpoints(100, "spader dubbel hela", 3);
+                    this.addMeldPoints(100, "spader dubbel hela", 3);
                     canBeTrump = true;
                     dubbelHela = true;
+                    spaderDubbelHela = true;
                 }
                 else {
-                    this.addPotentialpoints(100, "spader dubbel hela ", tmpCardsMissing, 1);
+                    updatePotential ? this.addPotentialMeldPoints(100, "spader dubbel hela ", tmpCardsMissing, 1) : null;
                 }
             }
             else {
                 if (tmpCardsMissing == 0) {
-                    this.addpoints(40, "spader dubbel hela", 3);
+                    this.addMeldPoints(40, "spader dubbel hela", 3);
+                    spaderDubbelHela = true;
                 }
                 else {
-                    this.addPotentialpoints(40, "spader dubbel hela ", tmpCardsMissing, 1);
+                    updatePotential ? this.addPotentialMeldPoints(40, "spader dubbel hela ", tmpCardsMissing, 1) : null;
                 }
             }
         }
-        tmpCardsMissing = this.myCards.containsOneOfEach(this.spader);
-        if (piinakka != 0 && !dubbelHela) {
-            if (trump == 0) {
+        tmpCardsMissing = this.myCards.containsOneOfEach(this.spader, this.meldCards);
+        if (piinakka != SPADER && !spaderDubbelHela) {
+            if (trump == SPADER) {
                 if (tmpCardsMissing == 0) {
-                    this.addpoints(40, "spaderhela", 5);
+                    this.addMeldPoints(40, "spaderhela", 5);
                     canBeTrump = true;
                 }
                 else {
-                    this.addPotentialpoints(40, "spader hela ", tmpCardsMissing, 2);
+                    updatePotential ? this.addPotentialMeldPoints(40, "spader hela ", tmpCardsMissing, 2) : null;
                 }
             }
             else if (tmpCardsMissing == 0) {
-                this.addpoints(20, "spaderhela", 5);
+                this.addMeldPoints(20, "spaderhela", 5);
             }
             else {
-                this.addPotentialpoints(20, "spader hela ", tmpCardsMissing, 2);
+                updatePotential ? this.addPotentialMeldPoints(20, "spader hela ", tmpCardsMissing, 2) : null;
             }
         }
         dubbelHela = false;
-        tmpCardsMissing = this.myCards.containsCards(this.hjarter2x);
-        if (piinakka != 1) {
-            if (trump == 1) {
+        tmpCardsMissing = this.myCards.containsCards(this.hjarter2x, this.meldCards);
+        if (piinakka != HJÄRTER) {
+            if (trump == HJÄRTER) {
                 if (tmpCardsMissing == 0) {
-                    this.addpoints(100, "hjärter dubbelhela", 3);
+                    this.addMeldPoints(100, "hjärter dubbelhela", 3);
                     canBeTrump = true;
                     dubbelHela = true;
+                    hjärterDubbelHela = true;
                 }
                 else {
-                    this.addPotentialpoints(100, "hjärter dubbel hela ", tmpCardsMissing, 1);
+                    updatePotential ? this.addPotentialMeldPoints(100, "hjärter dubbel hela ", tmpCardsMissing, 1) : null;
                 }
             }
             else {
                 if (tmpCardsMissing == 0) {
-                    this.addpoints(40, "hjärter dubbelhela", 3);
+                    this.addMeldPoints(40, "hjärter dubbelhela", 3);
+                    hjärterDubbelHela = true;
                 }
                 else {
-                    this.addPotentialpoints(40, "hjärter dubbel hela ", tmpCardsMissing, 1);
+                    updatePotential ? this.addPotentialMeldPoints(40, "hjärter dubbel hela ", tmpCardsMissing, 1) : null;
                 }
             }
         }
-        tmpCardsMissing = this.myCards.containsOneOfEach(this.hjarter);
-        if (piinakka != 1 && !dubbelHela) {
-            if (trump == 1) {
+        tmpCardsMissing = this.myCards.containsOneOfEach(this.hjarter, this.meldCards);
+        if (piinakka != HJÄRTER && !hjärterDubbelHela) {
+            if (trump == HJÄRTER) {
                 if (tmpCardsMissing == 0) {
-                    this.addpoints(40, "hjärterhela", 5);
+                    this.addMeldPoints(40, "hjärterhela", 5);
                     canBeTrump = true;
                 }
                 else {
-                    this.addPotentialpoints(40, "hjärter hela ", tmpCardsMissing, 2);
+                    updatePotential ? this.addPotentialMeldPoints(40, "hjärter hela ", tmpCardsMissing, 2) : null;
                 }
             }
             else if (tmpCardsMissing == 0) {
-                this.addpoints(20, "hjärterhela", 5);
+                this.addMeldPoints(20, "hjärterhela", 5);
             }
             else {
-                this.addPotentialpoints(20, "hjärter hela ", tmpCardsMissing, 2);
+                updatePotential ? this.addPotentialMeldPoints(20, "hjärter hela ", tmpCardsMissing, 2) : null;
             }
         }
         dubbelHela = false;
-        tmpCardsMissing = this.myCards.containsCards(this.klover2x);
-        if (piinakka != 2) {
-            if (trump == 2) {
+        tmpCardsMissing = this.myCards.containsCards(this.klover2x, this.meldCards);
+        if (piinakka != KLÖVER) {
+            if (trump == KLÖVER) {
                 if (tmpCardsMissing == 0) {
-                    this.addpoints(100, "klöver dubbelhela", 3);
+                    this.addMeldPoints(100, "klöver dubbelhela", 3);
                     canBeTrump = true;
                     dubbelHela = true;
+                    klöverDubbelHela = true;
                 }
                 else {
-                    this.addPotentialpoints(100, "klöver dubbelhela ", tmpCardsMissing, 1);
+                    updatePotential ? this.addPotentialMeldPoints(100, "klöver dubbelhela ", tmpCardsMissing, 1) : null;
                 }
             }
             else {
                 if (tmpCardsMissing == 0) {
-                    this.addpoints(40, "klöver dubbelhela", 3);
+                    this.addMeldPoints(40, "klöver dubbelhela", 3);
+                    klöverDubbelHela = true;
                 }
                 else {
-                    this.addPotentialpoints(40, "klöver dubbelhela ", tmpCardsMissing, 1);
+                    updatePotential ? this.addPotentialMeldPoints(40, "klöver dubbelhela ", tmpCardsMissing, 1) : null;
                 }
             }
         }
-        tmpCardsMissing = this.myCards.containsOneOfEach(this.klover);
-        if (piinakka != 2 && !dubbelHela) {
-            if (trump == 2) {
+        tmpCardsMissing = this.myCards.containsOneOfEach(this.klover, this.meldCards);
+        if (piinakka != KLÖVER && !klöverDubbelHela) {
+            if (trump == KLÖVER) {
                 if (tmpCardsMissing == 0) {
-                    this.addpoints(40, "klöverhela", 5);
+                    this.addMeldPoints(40, "klöverhela", 5);
                     canBeTrump = true;
                 }
                 else {
-                    this.addPotentialpoints(40, "klöver hela ", tmpCardsMissing, 2);
+                    updatePotential ? this.addPotentialMeldPoints(40, "klöver hela ", tmpCardsMissing, 2) : null;
                 }
             }
             else if (tmpCardsMissing == 0) {
-                this.addpoints(20, "klöverhela", 5);
+                this.addMeldPoints(20, "klöverhela", 5);
             }
             else {
-                this.addPotentialpoints(20, "klöver hela ", tmpCardsMissing, 2);
+                updatePotential ? this.addPotentialMeldPoints(20, "klöver hela ", tmpCardsMissing, 2) : null;
             }
         }
-        dubbelHela = false;
-        tmpCardsMissing = this.myCards.containsCards(this.ruter2x);
-        if (piinakka != 3) {
-            if (trump == 3) {
+        //dubbelHela = false;
+        tmpCardsMissing = this.myCards.containsCards(this.ruter2x, this.meldCards);
+        if (piinakka != RUTER) {
+            if (trump == RUTER) {
                 if (tmpCardsMissing == 0) {
-                    this.addpoints(100, "ruter dubbelhela", 3);
+                    this.addMeldPoints(100, "ruter dubbelhela", 3);
+                    canBeTrump = true;
+                    dubbelHela = true;
+                    ruterDubbelHela = true;
+                }
+                else {
+                    updatePotential ? this.addPotentialMeldPoints(100, "ruter dubbelhela ", tmpCardsMissing, 1) : null;
+                }
+            }
+            else {
+                if (tmpCardsMissing == 0) {
+                    this.addMeldPoints(40, "ruter dubbelhela", 3);
+                    ruterDubbelHela = true;
+                }
+                else {
+                    updatePotential ? this.addPotentialMeldPoints(40, "ruter dubbelhela ", tmpCardsMissing, 1) : null;
+                }
+            }
+        }
+        tmpCardsMissing = this.myCards.containsOneOfEach(this.ruter, this.meldCards);
+        if (piinakka != RUTER && !ruterDubbelHela) {
+            if (trump == RUTER) {
+                if (tmpCardsMissing == 0) {
+                    this.addMeldPoints(40, "ruterhela", 5);
                     canBeTrump = true;
                 }
                 else {
-                    this.addPotentialpoints(100, "ruter dubbelhela ", tmpCardsMissing, 1);
-                }
-            }
-            else {
-                if (tmpCardsMissing == 0) {
-                    this.addpoints(40, "ruter dubbelhela", 3);
-                }
-                else {
-                    this.addPotentialpoints(40, "ruter dubbelhela ", tmpCardsMissing, 1);
-                }
-            }
-        }
-        tmpCardsMissing = this.myCards.containsOneOfEach(this.ruter);
-        if (piinakka != 3) {
-            if (trump == 3) {
-                if (tmpCardsMissing == 0) {
-                    this.addpoints(40, "ruterhela", 5);
-                    canBeTrump = true;
-                }
-                else {
-                    this.addPotentialpoints(40, "ruter hela ", tmpCardsMissing, 2);
+                    updatePotential ? this.addPotentialMeldPoints(40, "ruter hela ", tmpCardsMissing, 2) : null;
                 }
             }
             else if (tmpCardsMissing == 0) {
-                this.addpoints(20, "ruterhela", 5);
+                this.addMeldPoints(20, "ruterhela", 5);
             }
             else {
-                this.addPotentialpoints(40, "ruter hela ", tmpCardsMissing, 2);
+                updatePotential ? this.addPotentialMeldPoints(40, "ruter hela ", tmpCardsMissing, 2) : null;
             }
         }
-        if (this.myCards.containsOneOfEach([[trump * 12 + 10], [trump * 12 + 11]]) == 0) {
-            this.addpoints(20, "två trumf 9", 4);
+        if (this.myCards.containsOneOfEach([[trump * 12 + 10], [trump * 12 + 11]], this.meldCards) == 0) {
+            this.addMeldPoints(20, "två trumf 9", 4);
         }
-        else if (this.myCards.containsOneOfEach([[trump * 12 + 10, trump * 12 + 11]]) == 0) {
-            this.addpoints(10, "trumf 9", 4);
+        else if (this.myCards.containsOneOfEach([[trump * 12 + 10, trump * 12 + 11]], this.meldCards) == 0) {
+            this.addMeldPoints(10, "trumf 9", 4);
         }
-        tmpCardsMissing = this.myCards.containsCards(this.a8);
+        tmpCardsMissing = this.myCards.containsCards(this.a8, this.meldCards);
         if (tmpCardsMissing == 0) {
-            this.addpoints(800, "8 äss!", 6);
+            this.addMeldPoints(800, "8 äss!", 6);
         }
         else {
-            this.addPotentialpoints(800, "8äss ", tmpCardsMissing, 1);
-            tmpCardsMissing = this.myCards.containsOneOfEach(this.a4);
+            updatePotential ? this.addPotentialMeldPoints(800, "8äss ", tmpCardsMissing, 1) : null;
+            tmpCardsMissing = this.myCards.containsOneOfEach(this.a4, this.meldCards);
             if (tmpCardsMissing == 0) {
-                this.addpoints(100, "4 äss", 7);
+                this.addMeldPoints(100, "4 äss", 7);
             }
             else {
-                this.addPotentialpoints(100, "4äss ", tmpCardsMissing, 2);
+                updatePotential ? this.addPotentialMeldPoints(100, "4äss ", tmpCardsMissing, 2) : null;
             }
         }
-        tmpCardsMissing = this.myCards.containsCards(this.k8);
+        tmpCardsMissing = this.myCards.containsCards(this.k8, this.meldCards);
         if (tmpCardsMissing == 0) {
-            this.addpoints(600, "8 kungar!", 8);
+            this.addMeldPoints(600, "8 kungar!", 8);
         }
         else {
-            this.addPotentialpoints(600, "8 K ", tmpCardsMissing, 1);
-            tmpCardsMissing = this.myCards.containsOneOfEach(this.k4);
+            updatePotential ? this.addPotentialMeldPoints(600, "8 K ", tmpCardsMissing, 1) : null;
+            tmpCardsMissing = this.myCards.containsOneOfEach(this.k4, this.meldCards);
             if (tmpCardsMissing == 0) {
-                this.addpoints(80, "4 kungar", 9);
+                this.addMeldPoints(80, "4 kungar", 9);
             }
             else if (tmpCardsMissing <= 2) {
-                this.addPotentialpoints(80, "4 K ", tmpCardsMissing, 2);
+                updatePotential ? this.addPotentialMeldPoints(80, "4 K ", tmpCardsMissing, 2) : null;
             }
         }
-        tmpCardsMissing = this.myCards.containsCards(this.q8);
+        tmpCardsMissing = this.myCards.containsCards(this.q8, this.meldCards);
         if (tmpCardsMissing == 0) {
-            this.addpoints(400, "8 damer!", 10);
+            this.addMeldPoints(400, "8 damer!", 10);
         }
         else {
-            this.addPotentialpoints(400, "8 Q ", tmpCardsMissing, 1);
-            tmpCardsMissing = this.myCards.containsOneOfEach(this.q4);
+            updatePotential ? this.addPotentialMeldPoints(400, "8 Q ", tmpCardsMissing, 1) : null;
+            tmpCardsMissing = this.myCards.containsOneOfEach(this.q4, this.meldCards);
             if (tmpCardsMissing == 0) {
-                this.addpoints(60, "4 damer", 11);
+                this.addMeldPoints(60, "4 damer", 11);
             }
             else {
-                this.addPotentialpoints(60, "4 Q ", tmpCardsMissing, 2);
+                updatePotential ? this.addPotentialMeldPoints(60, "4 Q ", tmpCardsMissing, 2) : null;
             }
         }
-        tmpCardsMissing = this.myCards.containsCards(this.j8);
+        tmpCardsMissing = this.myCards.containsCards(this.j8, this.meldCards);
         if (tmpCardsMissing == 0) {
-            this.addpoints(200, "8 knäktar!", 10);
+            this.addMeldPoints(200, "8 knäktar!", 10);
         }
         else {
-            this.addPotentialpoints(200, "8 J ", tmpCardsMissing, 1);
-            tmpCardsMissing = this.myCards.containsOneOfEach(this.j4);
+            updatePotential ? this.addPotentialMeldPoints(200, "8 J ", tmpCardsMissing, 1) : null;
+            tmpCardsMissing = this.myCards.containsOneOfEach(this.j4, this.meldCards);
             if (tmpCardsMissing == 0) {
-                this.addpoints(40, "4 knäktar", 11);
+                this.addMeldPoints(40, "4 knäktar", 11);
             }
             else {
-                this.addPotentialpoints(40, "4 J ", tmpCardsMissing, 2);
+                updatePotential ? this.addPotentialMeldPoints(40, "4 J ", tmpCardsMissing, 2) : null;
             }
         }
-        tmpCardsMissing = this.myCards.containsCards(this.dkdk);
+        tmpCardsMissing = this.myCards.containsCards(this.dkdk, this.meldCards);
         if (tmpCardsMissing == 0) {
-            this.addpoints(200, "spader dam, ruter knäkt dubbelt!", 14);
+            this.addMeldPoints(200, "spader dam, ruter knäkt dubbelt!", 14);
         }
         else {
-            this.addPotentialpoints(200, "spader dam, ruter knäkt dubbelt!", tmpCardsMissing, 1);
-            if (this.myCards.containsOneOfEach(this.dk) == 0) {
-                this.addpoints(40, "spader dam, ruter knäkt", 15);
+            updatePotential ? this.addPotentialMeldPoints(200, "spader dam, ruter knäkt dubbelt!", tmpCardsMissing, 1) : null;
+            if (this.myCards.containsOneOfEach(this.dk, this.meldCards) == 0) {
+                this.addMeldPoints(40, "spader dam, ruter knäkt", 15);
             }
         }
         return canBeTrump;
@@ -759,6 +803,12 @@ var Player = (function () {
             return false;
         }
     };
+    /**
+     * Get set of all cards that are higher than the given card
+     * @param suit
+     * @param card
+     * @return {SetOfCards}
+     */
     Player.prototype.getHigher = function (suit, card) {
         if (suit == null) {
             return this.myCards;
@@ -769,31 +819,26 @@ var Player = (function () {
             this.myCards.sortCards();
         }
         while (n < this.myCards.cardCount) {
-            //      console.log("card/2: "+ card/2+ ", my/2: "+this.myCards.cards[n]/2+", mysuit: "+this.myCards.cards[n] / 12 +", suit: "+suit);
             if (Cards_1["default"].getRank(card) > Cards_1["default"].getRank(this.myCards.cards[n]) &&
                 Cards_1["default"].getSuit(this.myCards.cards[n]) == suit) {
                 break;
             }
             n++;
         }
-        //    console.log("get higher n:"+n);
-        //let retcards = [];
         var i = 0;
         while (n < this.myCards.cardCount) {
             if (Cards_1["default"].getRank(card) > Cards_1["default"].getRank(this.myCards.cards[n]) &&
                 (Cards_1["default"].getSuit(this.myCards.cards[n]) == suit)) {
-                //        retcards[i] = this.myCards.cards[n];
                 higherCards.addCard(this.myCards.cards[n]);
                 i++;
             }
             n++;
         }
-        // console.log("get higher i:"+i);
-        //    return new SetOfCards(retcards, i);
         return higherCards;
     };
     /**
-     * Select a card to play
+     * Select a card to play. Player is trying to take the trick
+     *
      * @param cardsOnTable
      * @param trump
      * @param highestCard
@@ -801,11 +846,12 @@ var Player = (function () {
      * @return {any}
      */
     Player.prototype.playCard = function (cardsOnTable, trump, highestCard, remainingPlayers) {
+        // TODO: don't leave trump ace alone?
         var haveHigherCard = true;
         var playableCards;
         var originalSuit = Cards_1["default"].getSuit(cardsOnTable.cards[0]);
         if (cardsOnTable.cardCount == 0) {
-            if (this.LOGICDEBUG) {
+            if (this.LOGIC_DEBUG) {
                 console.log("play any");
             }
             playableCards = this.getHigher(null, Cards_1["default"].CARDSINDECK);
@@ -814,20 +860,20 @@ var Player = (function () {
             //      console.log("suit: "+originalSuit);
             if (Cards_1["default"].getSuit(highestCard) == trump && originalSuit == trump) {
                 if (this.haveHigher(trump, highestCard)) {
-                    if (this.LOGICDEBUG) {
+                    if (this.LOGIC_DEBUG) {
                         console.log("trump: have higher trump");
                     }
                     playableCards = this.getHigher(trump, highestCard);
                 }
                 else if (this.haveHigher(trump, Cards_1["default"].CARDSINDECK)) {
-                    if (this.LOGICDEBUG) {
+                    if (this.LOGIC_DEBUG) {
                         console.log("trump: have lower trump ");
                     }
                     haveHigherCard = false;
                     playableCards = this.getHigher(trump, Cards_1["default"].CARDSINDECK);
                 }
                 else {
-                    if (this.LOGICDEBUG) {
+                    if (this.LOGIC_DEBUG) {
                         console.log("trump: play any");
                     }
                     haveHigherCard = false;
@@ -836,27 +882,27 @@ var Player = (function () {
             }
             else if (Cards_1["default"].getSuit(highestCard) == trump) {
                 if (this.haveHigher(originalSuit, Cards_1["default"].CARDSINDECK)) {
-                    if (this.LOGICDEBUG) {
+                    if (this.LOGIC_DEBUG) {
                         console.log("suit+trump: have suit " + trump);
                     }
                     haveHigherCard = false;
                     playableCards = this.getHigher(originalSuit, Cards_1["default"].CARDSINDECK);
                 }
                 else if (this.haveHigher(trump, highestCard)) {
-                    if (this.LOGICDEBUG) {
+                    if (this.LOGIC_DEBUG) {
                         console.log("suit+trump: have higher trump " + trump);
                     }
                     playableCards = this.getHigher(trump, highestCard);
                 }
                 else if (this.haveHigher(trump, Cards_1["default"].CARDSINDECK)) {
-                    if (this.LOGICDEBUG) {
+                    if (this.LOGIC_DEBUG) {
                         console.log("suit+trump: have lower trump " + trump);
                     }
                     haveHigherCard = false;
                     playableCards = this.getHigher(trump, Cards_1["default"].CARDSINDECK);
                 }
                 else {
-                    if (this.LOGICDEBUG) {
+                    if (this.LOGIC_DEBUG) {
                         console.log("suit+trump: play any " + trump);
                     }
                     haveHigherCard = false;
@@ -865,26 +911,26 @@ var Player = (function () {
             }
             else {
                 if (this.haveHigher(originalSuit, highestCard)) {
-                    if (this.LOGICDEBUG) {
+                    if (this.LOGIC_DEBUG) {
                         console.log("have higher");
                     }
                     playableCards = this.getHigher(originalSuit, highestCard);
                 }
                 else if (this.haveHigher(originalSuit, Cards_1["default"].CARDSINDECK)) {
-                    if (this.LOGICDEBUG) {
+                    if (this.LOGIC_DEBUG) {
                         console.log("have lower");
                     }
                     haveHigherCard = false;
                     playableCards = this.getHigher(originalSuit, Cards_1["default"].CARDSINDECK);
                 }
                 else if (this.haveHigher(trump, Cards_1["default"].CARDSINDECK)) {
-                    if (this.LOGICDEBUG) {
+                    if (this.LOGIC_DEBUG) {
                         console.log("have trump");
                     }
                     playableCards = this.getHigher(trump, Cards_1["default"].CARDSINDECK);
                 }
                 else {
-                    if (this.LOGICDEBUG) {
+                    if (this.LOGIC_DEBUG) {
                         console.log("have any");
                     }
                     haveHigherCard = false;
@@ -897,7 +943,8 @@ var Player = (function () {
             // try to take the trick
             if (playableCards.cardCount == 1) {
                 // play the only possible card
-                if (this.LOGICDEBUG) {
+                console.log('try to take the trick, play the only possible card');
+                if (this.LOGIC_DEBUG) {
                     console.log("Playable cards 1: " + playableCards);
                 }
                 cardToPlay = playableCards.cards[0];
@@ -906,39 +953,42 @@ var Player = (function () {
             else if (playableCards.cardCount == 2 &&
                 Math.floor(playableCards.cards[0] / 2) == Math.floor(playableCards.cards[1] / 2)) {
                 // have two identical cards
-                if (this.LOGICDEBUG) {
+                if (this.LOGIC_DEBUG) {
                     console.log("Playable cards 2: " + playableCards);
                 }
                 cardToPlay = playableCards.cards[0];
+                console.log('try to take the trick, two identical cards');
                 this.myCards.removeCard(cardToPlay);
             }
             else {
                 // play the best card
-                if (this.LOGICDEBUG) {
+                if (this.LOGIC_DEBUG) {
                     console.log("Playable cards: " + playableCards);
                 }
-                cardToPlay = this.findBestCard(playableCards, trump, remainingPlayers, cardsOnTable.cards[0]);
+                cardToPlay = this.findBestCard(playableCards, trump, remainingPlayers, originalSuit);
                 this.myCards.removeCard(cardToPlay);
             }
         }
         else {
             // throw the lowest card you have
             playableCards.sortCardsByRank(trump);
-            if (this.LOGICDEBUG) {
+            if (this.LOGIC_DEBUG) {
                 console.log("Playable low cards sorted: " + playableCards);
             }
             cardToPlay = playableCards.cards[0];
+            console.log('throw the lowest card you have');
             this.myCards.removeCard(cardToPlay); // play the lowest card
         }
-        if (this.LOGICDEBUG) {
+        if (this.LOGIC_DEBUG) {
             console.log(this.myPlayerID + " Card Played: " + Cards_1["default"].cardString(cardToPlay));
         }
         return cardToPlay;
     };
     Player.prototype.newGame = function () {
         this.myCards.clear();
+        this.stack = 0;
         for (var n = 0; n < this.cardStatus.length; n++) {
-            this.cardStatus[n] = this.otherplayersBITMASK; // anyone else may have card
+            this.cardStatus[n] = this.otherPlayersBITMASK; // anyone else may have card
         }
     };
     Player.prototype.addCards = function (newcards, reset) {
@@ -951,37 +1001,51 @@ var Player = (function () {
         }
     };
     /**
-     * Find the best card to play
+     * Find the best card to play, when player must go higher. Might be possible to take the trick.
      *
      * @param playableCards SetOfCards set of legal cards to play
      * @param trump
      * @param remainingPlayers
-     * @param highestCardOnTable
+     * @param originalSuit
      * @return {number}
      */
-    Player.prototype.findBestCard = function (playableCards, trump, remainingPlayers, highestCardOnTable) {
+    Player.prototype.findBestCard = function (playableCards, trump, remainingPlayers, originalSuit) {
         var cardOdds = [];
         //    let tmp;
         if (remainingPlayers == 0) {
             playableCards.sortCardsByRank(trump);
-            this.cardStatus[playableCards.cards[0]] = 0;
-            return playableCards.cards[0];
+            var odds = this.getOdds(playableCards.cards[0], trump, remainingPlayers, originalSuit);
+            if (odds < 0.1) {
+                console.log('I\'m the last player, won\'t get trick, play lowest possible card');
+                this.cardStatus[playableCards.cards[0]] = 0;
+                return playableCards.cards[0];
+            }
+            else {
+                console.log('I\'m the last player, will get trick, play low card with high points');
+                var cardPoints_1 = Cards_1["default"].getPoints(playableCards.cards[0]);
+                var betterCard = playableCards.cards.findIndex(function (card) {
+                    return card !== null &&
+                        Cards_1["default"].getPoints(card) - cardPoints_1 == 5 &&
+                        Cards_1["default"].getRankStr(card) != 'A';
+                });
+                if (betterCard == -1) {
+                    betterCard = 0;
+                }
+                this.cardStatus[playableCards.cards[betterCard]] = 0;
+                return playableCards.cards[betterCard];
+            }
         }
         else {
             playableCards.sortCardsByRank(trump);
             // play lowest card with best odds
             for (var n = 0; n < playableCards.cardCount; n++) {
-                cardOdds[n] = this.getOdds(playableCards.cards[n], trump, remainingPlayers, highestCardOnTable);
-                //if (this.LOGICDEBUG) {
-                console.log(Cards_1["default"].cardString(playableCards.cards[n]) + " - " + cardOdds[n] + "%");
+                cardOdds[n] = this.getOdds(playableCards.cards[n], trump, remainingPlayers, originalSuit);
             }
             // sort cards by odds (lowest first)
-            Util_1["default"].ArraySort2(cardOdds, playableCards.cards);
-            //      cardOdds=tmp[0];
-            //      for (n=0;n<playableCards.cardCount;n++) {
-            //        if (myPlayerID == 2) console.log(Cards.cardString(
-            //            playableCards.cards[n]) + " - " + cardOdds[n] + "%");
-            //      }
+            Util_1["default"].SortCardsByOdds(cardOdds, playableCards.cards);
+            for (var n = 0; n < playableCards.cardCount; n++) {
+                console.log(Cards_1["default"].cardString(playableCards.cards[n]) + " - " + cardOdds[n] + "%");
+            }
             // if all non-trump cards are 0%, play card in smallest suit, that is not an ace
             var allZeros = true;
             for (var n = cardOdds.length - 1; n > 0; n--) {
@@ -1006,18 +1070,51 @@ var Player = (function () {
                     }
                     for (var j = 0; j < playableCards.cardCount; j++) {
                         if (Cards_1["default"].getSuit(playableCards.cards[j]) == suits[i] && Cards_1["default"].getRank(playableCards.cards[j]) != 0) {
+                            console.log('play card in smallest suit (not trump), that is not an ace');
                             return playableCards.cards[j];
                         }
                     }
                 }
             }
-            if (cardOdds[cardOdds.length - 1] >= 50) {
+            if (cardOdds[cardOdds.length - 1] >= this.oddsLimit) {
                 if (this.playerStrategy == 1) {
-                    for (var i = 0; i < cardOdds.length; i++)
-                        if (cardOdds[i] >= 50) {
-                            console.log('playing lowest card with odds over 50%');
-                            return playableCards.cards[i]; // return lowest card with best odds (over 50%)
+                    //          for (let i = 0; i < cardOdds.length; i++) {
+                    var firstMatch = null;
+                    for (var i = cardOdds.length - 1; i > 0; i--) {
+                        if (cardOdds[i] >= this.oddsLimit && Cards_1["default"].getSuit(playableCards.cards[i]) !== trump) {
+                            if (firstMatch === null) {
+                                firstMatch = i;
+                            }
+                            // if two cards in the same suit have the same odds, play the lower one
+                            if (i > 0 && cardOdds[firstMatch] - cardOdds[i - 1] < 10 &&
+                                Cards_1["default"].getSuit(playableCards.cards[i - 1]) !== trump &&
+                                Cards_1["default"].getSuit(playableCards.cards[i - 1]) == Cards_1["default"].getSuit(playableCards.cards[i])) {
+                                continue;
+                            }
+                            console.log('playing best non-trump card with odds over ' + this.oddsLimit + '%');
+                            return playableCards.cards[i];
                         }
+                    }
+                    var _loop_1 = function (i) {
+                        if (cardOdds[i] >= this_1.oddsLimit) {
+                            var betterCard = playableCards.cards.findIndex(function (card, index) {
+                                return cardOdds[index] - cardOdds[i] < 10 &&
+                                    Cards_1["default"].getPoints(playableCards.cards[index]) - Cards_1["default"].getPoints(playableCards.cards[i]) == 5;
+                            });
+                            console.log('playing (almost) worst trump card with odds over ' + this_1.oddsLimit + '%');
+                            if (betterCard == -1) {
+                                betterCard = i;
+                            }
+                            return { value: playableCards.cards[betterCard] };
+                        }
+                    };
+                    var this_1 = this;
+                    // TODO: try to take last trick
+                    for (var i = 0; i < cardOdds.length; i++) {
+                        var state_1 = _loop_1(i);
+                        if (typeof state_1 === "object")
+                            return state_1.value;
+                    }
                     console.log('playing worst card');
                     return playableCards.cards[0];
                 }
@@ -1027,8 +1124,18 @@ var Player = (function () {
                 }
             }
             else {
-                console.log('playing worst card, none over 50%');
-                return playableCards.cards[0]; // return card with worst odds
+                var card = playableCards.cards.findIndex(function (card) { return card !== null && Cards_1["default"].getSuit(card) !== trump; });
+                if (card !== -1) {
+                    // TODO: try to take out opponent trumps?
+                    console.log('playing worst non-trump card, none over ' + this.oddsLimit + '%');
+                    console.log('card is ' + card + '=' + playableCards.cards[card]);
+                    console.log(JSON.stringify(playableCards.cards));
+                    return playableCards.cards[card];
+                }
+                else {
+                    console.log('playing worst (trump) card, none over ' + this.oddsLimit + '%');
+                    return playableCards.cards[0]; // return card with worst odds
+                }
             }
         }
     };
@@ -1037,10 +1144,10 @@ var Player = (function () {
      * @param thisCard
      * @param trump
      * @param remainingPlayers
-     * @param highestCardOnTable
+     * @param originalSuit
      * @return {number}
      */
-    Player.prototype.getOdds = function (thisCard, trump, remainingPlayers, highestCardOnTable) {
+    Player.prototype.getOdds = function (thisCard, trump, remainingPlayers, originalSuit) {
         var thisCardSuit = Cards_1["default"].getSuit(thisCard);
         var highestCard;
         var lowestCard;
@@ -1054,10 +1161,10 @@ var Player = (function () {
         if (this.DEBUG) {
             console.log("card to compare: " + Cards_1["default"].cardString(thisCard));
         }
-        //    console.log("highestCardOnTable: " +highestCardOnTable);
+        //    console.log("originalSuit: " +originalSuit);
         totalSum = 100;
         notHigher = 100;
-        if (thisCardSuit == Cards_1["default"].getSuit(highestCardOnTable) || highestCardOnTable === null) {
+        if (thisCardSuit == originalSuit || originalSuit === null) {
             // I have original suit, or can play any suit
             highestCard = thisCardSuit * Cards_1["default"].CARDSINSUIT; // highest card in suit (ace)
             lowestCard = (Math.floor(thisCard / 2)) * 2;
@@ -1070,7 +1177,7 @@ var Player = (function () {
                     console.log("H comparing: " + Cards_1["default"].cardString(n) + ' status: ' + this.cardStatus[n]);
                 }
                 // calculate chance of remaining players NOT having card
-                possibleOwners = this.bitCount(this.cardStatus[n] & (this.otherplayersBITMASK));
+                possibleOwners = this.bitCount(this.cardStatus[n] & (this.otherPlayersBITMASK));
                 ownersLeft = this.bitCount(this.cardStatus[n] & remainingPlayers);
                 if (possibleOwners != 0) {
                     //            notHigher[player] *= 1000 -
@@ -1078,6 +1185,8 @@ var Player = (function () {
                     notHigher *= 100 - ownersLeft * 100 / possibleOwners;
                     notHigher /= 100;
                 }
+                // console.log("possible: "+possibleOwners);
+                //        console.log("sum: " + notHigher[player]);
             }
             if (this.DEBUG) {
                 console.log("Chance of other players not having a higher card in suit: " + notHigher.toFixed(2) + '%');
@@ -1104,12 +1213,14 @@ var Player = (function () {
                             console.log("L comparing: " + Cards_1["default"].cardString(n));
                         }
                         // calculate chance of this player NOT having card
-                        possibleOwners = this.bitCount(this.cardStatus[n] & this.otherplayersBITMASK);
+                        possibleOwners = this.bitCount(this.cardStatus[n] & this.otherPlayersBITMASK);
                         ownersLeft = this.bitCount(this.cardStatus[n] & thisOwner);
                         if (possibleOwners != 0) {
                             notLower[player] *= 100 - ownersLeft * 100 / possibleOwners;
                             notLower[player] /= 100;
                         }
+                        //console.log("possible: "+possibleOwners);
+                        //console.log("sum: " + notLower[player]);
                     }
                     var tstart = trump * Cards_1["default"].CARDSINSUIT; // lowest trump
                     var tend = trump * Cards_1["default"].CARDSINSUIT + Cards_1["default"].CARDSINSUIT; // highest trump
@@ -1119,12 +1230,14 @@ var Player = (function () {
                             console.log("T comparing: " + Cards_1["default"].cardString(n));
                         }
                         // calculate chance of player NOT having card
-                        possibleOwners = this.bitCount(this.cardStatus[n] & this.otherplayersBITMASK);
+                        possibleOwners = this.bitCount(this.cardStatus[n] & this.otherPlayersBITMASK);
                         ownersLeft = this.bitCount(this.cardStatus[n] & thisOwner);
                         if (possibleOwners != 0) {
                             notTrump[player] *= 100 - ownersLeft * 100 / possibleOwners;
                             notTrump[player] /= 100;
                         }
+                        //          console.log("possible: "+possibleOwners);
+                        //        console.log("nottrump sum: " + notTrump[player]);;
                     }
                     if (this.DEBUG) {
                         console.log("Chance of player not having lower card in suit: " + notLower[player]);
@@ -1135,10 +1248,15 @@ var Player = (function () {
                     totalSum *= 100 - notLower[player] * (100 - notTrump[player]) / 100;
                     totalSum /= 100;
                 }
+                /*        totalSum *= 1000 -
+                 (1000 - (notHigher[player] * (1000 - notLower[player])) / 1000) *
+                 (1000 - (notHigher[player] * notLower[player] * notTrump[player] / 1000 / 1000)) / 1000;
+                 totalSum /= 1000; */
+                //      console.log("total: "+totalSum);
             }
         }
         else {
-            highestCard = Math.floor(highestCardOnTable / Cards_1["default"].CARDSINSUIT) * Cards_1["default"].CARDSINSUIT; // highest card in original suit
+            highestCard = originalSuit * Cards_1["default"].CARDSINSUIT; // highest card in original suit
             lowestCard = highestCard + Cards_1["default"].CARDSINSUIT; // lowest
             if (this.DEBUG) {
                 console.log("highestCard-lowestCard: " + highestCard + " - " + lowestCard);
@@ -1155,12 +1273,14 @@ var Player = (function () {
                         console.log("S comparing: " + Cards_1["default"].cardString(n));
                     }
                     // calculate chance of player NOT having card
-                    possibleOwners = this.bitCount(this.cardStatus[n] & this.otherplayersBITMASK);
+                    possibleOwners = this.bitCount(this.cardStatus[n] & this.otherPlayersBITMASK);
                     ownersLeft = this.bitCount(this.cardStatus[n] & thisOwner);
                     if (possibleOwners != 0) {
                         notLower[player] *= 100 - ownersLeft * 100 / possibleOwners;
                         notLower[player] /= 100;
                     }
+                    //        console.log("possible: "+possibleOwners);
+                    //        console.log("sum: " + sum);
                 }
                 var tstart = thisCardSuit * Cards_1["default"].CARDSINSUIT; // highest trump
                 var tend = (Math.floor(thisCard / 2)) * 2; // lowest trump higher than mine
@@ -1170,12 +1290,14 @@ var Player = (function () {
                         console.log("TT comparing: " + Cards_1["default"].cardString(n));
                     }
                     // calculate chance of player NOT having trump
-                    possibleOwners = this.bitCount(this.cardStatus[n] & this.otherplayersBITMASK);
+                    possibleOwners = this.bitCount(this.cardStatus[n] & this.otherPlayersBITMASK);
                     ownersLeft = this.bitCount(this.cardStatus[n] & thisOwner);
                     if (possibleOwners != 0) {
                         notTrump[player] *= 100 - ownersLeft * 100 / possibleOwners;
                         notTrump[player] /= 100;
                     }
+                    //          console.log("possible: "+possibleOwners);
+                    //          console.log("sum: " + notTrump);
                 }
                 if (this.DEBUG) {
                     console.log("notOriginal: " + notLower[player]);
@@ -1186,6 +1308,7 @@ var Player = (function () {
                 // !(!original & högretrumf)
                 totalSum *= 100 - (notLower[player] * (100 - notTrump[player])) / 100;
                 totalSum /= 100;
+                //      console.log("total: "+totalSum);
             }
         }
         if (this.DEBUG) {
@@ -1275,32 +1398,35 @@ var Player = (function () {
         if (disposableCards.cardCount <= count) {
             for (var n = 0; n < disposableCards.cardCount; n++) {
                 if (disposableCards.cards[n] % 12 < 4) {
-                    this.points += 10;
+                    this.meldPoints += 10;
                 }
                 else if (disposableCards.cards[n] % 12 < 8) {
-                    this.points += 5;
+                    this.meldPoints += 5;
                 }
                 this.myCards.removeCard(disposableCards.cards[n]);
+                //console.log("1Discarding card "+Cards.cardString(disposableCards.cards[n]));
             }
             if (disposableCards.cardCount < count) {
                 this.myCards.sortCardsByRank(trump);
                 for (var n = disposableCards.cardCount; n < count; n++) {
                     if (disposableCards.cards[0] % 12 < 4) {
-                        this.points += 10;
+                        this.meldPoints += 10;
                     }
                     else if (disposableCards.cards[0] % 12 < 8) {
-                        this.points += 5;
+                        this.meldPoints += 5;
                     }
                     discardedCards.push(this.myCards.removeCard(disposableCards.cards[0]));
+                    //console.log("2Discarding card "+Cards.cardString(disposableCards.cards[0]));
                 }
             }
         }
         else {
             disposableCards.sortCards();
-            var suitCounts = this.getSmallestSuits(disposableCards);
+            //      let suitCounts = this.getSmallestSuits(disposableCards);
+            var suitCounts = this.getSmallestSuits(this.myCards);
             var suitCount = suitCounts.suitCount;
             var suits = suitCounts.suits;
-            console.log('suits: ' + JSON.stringify(suitCount) + ' ' + JSON.stringify(suits));
+            console.log('suits: count: ' + JSON.stringify(suitCount) + '  suits: ' + JSON.stringify(suits));
             // remove cards from smallest suit(s)
             var i = count;
             var j = 0;
@@ -1313,10 +1439,10 @@ var Player = (function () {
                 }
                 else {
                     if (card % 12 < 4) {
-                        this.points += 10;
+                        this.meldPoints += 10;
                     }
                     else if (card % 12 < 8) {
-                        this.points += 5;
+                        this.meldPoints += 5;
                     }
                     discardedCards.push(this.myCards.removeCard(card));
                     //console.log("3Discarding card "+Cards.cardString(card));
@@ -1343,11 +1469,10 @@ var Player = (function () {
             suitCount[Math.floor(cards.cards[n] / 12)]++;
         }
         // see which suits are the smallest
-        Util_1["default"].ArraySort2(suitCount, suits);
+        Util_1["default"].SortCardsByOdds(suitCount, suits);
         return { suitCount: suitCount, suits: suits };
     };
     return Player;
 }());
-exports.__esModule = true;
 exports["default"] = Player;
 //# sourceMappingURL=Player.js.map

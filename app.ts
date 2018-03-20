@@ -1,36 +1,66 @@
 var express = require('express');
-var path = require('path');
-var favicon = require('serve-favicon');
-var logger = require('morgan');
-var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
-//var GameOfPinochle = require('./server/GameOfPinochle.js');
 import GameOfPinochle from './server/GameOfPinochle';
 
-var index = require('./routes/index');
-var users = require('./routes/users');
 
 var app = express();
 
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
-
-// uncomment after placing your favicon in /public
-//app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
-app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', index);
-app.use('/users', users);
+app.game = new GameOfPinochle();
+
+
+app.get('/api/start', function(req, res, next) {
+  // start a new game, deal cards
+  console.log('Starting game!');
+  app.game.newGame();
+  res.send(app.game.getState());
+});
+
+app.get('/api/play-card', function(req, res, next) {
+  // human player plays a card
+  res.send(app.game.getState());
+});
+
+app.get('/api/discard', function(req, res, next) {
+  console.log('discard called');
+  app.game.cpuDiscardCards();
+  res.send(app.game.getState());
+});
+
+app.get('/api/play-round', function(req, res, next) {
+  if (app.game.playNextRound()) {
+    res.send(app.game.getState());
+  } else {
+    res.send(app.game.getState());
+  }
+});
+
+app.get('/api/play-rounds', function(req, res, next) {
+  for(let n=0;n<10000;n++) {
+    app.game.newGame();
+    if (app.game.state !== "cannotBid") {
+      app.game.playRounds();
+    }
+  }
+  app.game.getStats();
+  res.send(app.game.getState());
+});
+
+app.get('/api/get-state', function(req, res, next) {
+  // get full game status from server: all cards, points, etc
+  res.send(app.game.getState());
+});
+
+app.use(express.static('public'));
+app.use(express.static('bower_components'));
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   var err = new Error('Not Found');
-  err.status = 404;
+  console.log('page not found: ' + JSON.stringify(req));
+//  err.status = 404;
   next(err);
 });
 
@@ -38,13 +68,19 @@ app.use(function(req, res, next) {
 app.use(function(err, req, res, next) {
   // set locals, only providing error in development
   res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+  res.locals.error = err;
 
   // render the error page
   res.status(err.status || 500);
-  res.render('error');
+  next();
 });
 
-new GameOfPinochle();
+
+app.listen(3000, function() {
+
+    app.emit('started');
+
+  console.log('Example app listening on port 3000!')
+});
 
 module.exports = app;

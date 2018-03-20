@@ -1,0 +1,28 @@
+{
+  "name": "piinakka",
+  "description": "",
+  "main": "",
+  "authors": [
+    "Miro Wikgren <miro.wikgren@w3.fi>"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/mirow/piinakka",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "angular": "^1.6.4",
+    "jquery": "^3.2.1",
+    "lodash": "^4.17.4",
+    "angular-ui-router": "^1.0.3",
+    "angular-playing-cards": "*",
+    "angular-animate": "^1.6.9"
+  },
+  "resolutions": {
+    "angular": "^1.6.4"
+  }
+}

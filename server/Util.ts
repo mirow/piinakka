@@ -40,7 +40,7 @@ export default class Util {
    * @param arr2 int[] array that is also arranged
    * @return int[][] sorted arrays
    */
-  static ArraySort2(arr: number[], arr2: number[]) {
+  static SortCardsByOdds(arr: number[], arr2: number[]) {
     let swapped;
     let n;
     let tmp;
@@ -64,13 +64,6 @@ export default class Util {
     } while (swapped);
 //     return new int[][] {arr, arr2};
     return;
-  }
-
-  static power(base, pow) {
-    let res = 1;
-    for (let n = 0; n < pow; n++)
-      res *= base;
-    return res;
   }
 
 }

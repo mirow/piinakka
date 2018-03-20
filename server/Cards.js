@@ -1,5 +1,6 @@
 'use strict';
-var Cards = (function () {
+exports.__esModule = true;
+var Cards = /** @class */ (function () {
     function Cards() {
     }
     Cards.getSuit = function (card) {
@@ -17,6 +18,17 @@ var Cards = (function () {
         else {
             return Cards.RANKS;
         } // lowest ranking card
+    };
+    Cards.getPoints = function (card) {
+        if (card >= 0 && card < Cards.CARDSINDECK) {
+            return 10 - Math.floor((card % Cards.CARDSINSUIT) / Cards.PACKS / 2) * 5;
+        }
+        else {
+            return 0;
+        }
+    };
+    Cards.isLowerCard = function (card) {
+        return this.getRankStr(card) == '10' || this.getRankStr(card) == 'Q' || this.getRankStr(card) == '9';
     };
     Cards.getSuitStr = function (card) {
         if (card >= 0 && card < Cards.CARDSINDECK) {
@@ -36,7 +48,8 @@ var Cards = (function () {
     };
     Cards.cardString = function (card) {
         if (card === null) {
-            return "(no card)";
+            throw 'Card is null';
+            //      return "(no card)";
         }
         return Cards.getRankStr(card) + "" + Cards.getSuitStr(card);
     };
@@ -49,6 +62,5 @@ var Cards = (function () {
     Cards.CARDSINSUIT = Cards.RANKS * Cards.PACKS;
     return Cards;
 }());
-exports.__esModule = true;
 exports["default"] = Cards;
 //# sourceMappingURL=Cards.js.map

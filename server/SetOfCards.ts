@@ -2,44 +2,42 @@
 import Cards from './Cards';
 import Util from './Util';
 
-export default class SetOfCards extends Cards {
+export default class SetOfCards {
 
   cardCount: number;
   maxCardCount: number;
   cards: number[];
   sorted: boolean = false;
-  subset: SetOfCards;
 
   constructor(maxCards: number) {
-    super();
     this.cardCount = 0;
     this.maxCardCount = maxCards;
     this.cards = [];
-    for (let n = 0; n < this.maxCardCount; n++) this.cards[n] = null;
   }
 
-  SetOfCards(newCards, cCount) {
-    this.maxCardCount = newCards.length;
 
-    this.cardCount = cCount;
-    this.cards = newCards;
+  static dummySet(count, maxCount): SetOfCards {
+    let set = new SetOfCards(maxCount);
+    for (let n = 0; n < count; n++) set.cards[n] = -1;
+    set.cardCount = count;
 
-    for (let n = cCount; n < this.maxCardCount; n++)
-      this.cards[n] = null;
+    return set;
   }
+
 
   addCard(cardValue) {
     if (this.cardCount == this.maxCardCount) {
+      console.log('tried to add card, but already had full amount ' + this.maxCardCount);
       return false;
     }
-    this.cards[this.cardCount] = cardValue;
-    this.cardCount++;
+    this.cards[this.cardCount++] = cardValue;
     this.sorted = false;
     return true;
   }
 
   addSetOfCards(newCards: SetOfCards): boolean {
     if (this.cardCount == this.maxCardCount) {
+      console.log('tried to add card, but already had full amount ' + this.maxCardCount);
       return false;
     }
     i: for (let i = 0; i < newCards.cardCount; i++) {
@@ -140,7 +138,7 @@ export default class SetOfCards extends Cards {
     this.sorted = true;
   }
 
-  containsCards(targets: number[]) {
+  containsCards(targets: number[], meldCards) {
     let tmp = new SetOfCards(15);
 
     let cardsMissing = targets.length;
@@ -151,14 +149,14 @@ export default class SetOfCards extends Cards {
       }
     }
     if (cardsMissing == 0) {
-      this.subset.addSetOfCards(tmp);
+      meldCards.addSetOfCards(tmp);
 //        System.out.println("Adding " +tmp);
     }
 
     return cardsMissing;
   }
 
-  containsOneOfEach(targets: number[][]) {
+  containsOneOfEach(targets: number[][], meldCards) {
     let tmp = new SetOfCards(15);
 
     let cardsMissing = targets.length;
@@ -176,7 +174,7 @@ export default class SetOfCards extends Cards {
 //        if (!cardsFound) return false; // no cards in set were found
     }
     if (cardsMissing == 0) {
-      this.subset.addSetOfCards(tmp);
+      meldCards.addSetOfCards(tmp);
 //        System.out.println("Adding " +tmp);
     }
     return cardsMissing; // at least one card in each set was found
@@ -199,7 +197,7 @@ export default class SetOfCards extends Cards {
 
   clear() {
     this.cardCount = 0;
-    for (let n = 0; n < this.maxCardCount; n++) this.cards[n] = null;
+    this.cards = [];
   }
 
   isHigherCard(cardPlayed, highestCard, trump): boolean {
@@ -207,10 +205,10 @@ export default class SetOfCards extends Cards {
       return true;
     } // this is the first card played, so it's the highest
     if (Cards.getSuit(cardPlayed) == trump) { // this card is trump
-      return !!(Cards.getSuit(highestCard) != trump || Cards.getRank(cardPlayed) < Cards.getRank(highestCard));
+      return (Cards.getSuit(highestCard) != trump || Cards.getRank(cardPlayed) < Cards.getRank(highestCard));
     } else { // this card is not trump
-      return !!(Cards.getSuit(highestCard) != trump && Cards.getRank(cardPlayed) < Cards.getRank(highestCard) &&
-      Cards.getSuit(cardPlayed) == Cards.getSuit(highestCard));
+      return (Cards.getSuit(highestCard) != trump && Cards.getRank(cardPlayed) < Cards.getRank(highestCard) &&
+        Cards.getSuit(cardPlayed) == Cards.getSuit(highestCard));
     }
   }
 

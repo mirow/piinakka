@@ -1,0 +1,26 @@
+<div class="cards-on-hand">
+  <div>
+    <span>Player {{i}}</span>
+    <span ng-if="vm.state=='SHOW BIDS' || vm.game.bidWinner==i"><br/>Bid: {{vm.game.players[i].bid}}</span>
+    <span ng-if="vm.state=='READY'">
+      <br/>Meld: {{vm.game.players[i].meldPoints}}
+      <br/>Tricks: {{vm.game.players[i].trickPoints}}
+    </span>
+    <br/>
+    <br/>
+  </div>
+  <div style="font-size:20%">
+    <div ng-repeat="i in vm.game.players[i].stack track by $index" class="high-stack-cards"
+         ng-style="{transform: 'rotate('+i+'deg)'}">
+      <playing-card/>
+    </div>
+  </div>
+  <div style="font-size:40%">
+    <div ng-repeat="card in vm.game.players[i].cards.cards track by $index" class="stack-cards"
+         ng-class="{meld: card.meld}">
+      <playing-card rank="card.rank" suit="card.suit"/>
+    </div>
+  </div>
+
+  <div style="clear: both">&nbsp;</div>
+</div>

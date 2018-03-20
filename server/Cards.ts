@@ -29,6 +29,17 @@ export default class Cards {
     } // lowest ranking card
   }
 
+  static getPoints(card) {
+    if (card >= 0 && card < Cards.CARDSINDECK) {
+      return 10  - Math.floor((card % Cards.CARDSINSUIT) / Cards.PACKS / 2) * 5;
+    } else {
+      return 0;
+    }
+  }
+
+  static isLowerCard(card) {
+    return this.getRankStr(card) == '10' || this.getRankStr(card) == 'Q' || this.getRankStr(card) == '9';
+  }
   static getSuitStr(card): String {
     if (card >= 0 && card < Cards.CARDSINDECK) {
       return Cards.suits[Math.floor(card / Cards.CARDSINSUIT)];
@@ -47,7 +58,8 @@ export default class Cards {
 
   static cardString(card: number): String {
     if (card === null) {
-      return "(no card)";
+      throw 'Card is null';
+//      return "(no card)";
     }
     return Cards.getRankStr(card) + "" + Cards.getSuitStr(card);
   }

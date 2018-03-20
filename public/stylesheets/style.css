@@ -1,0 +1,121 @@
+body {
+  padding: 10px;
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+}
+
+a {
+  color: #00B7FF;
+}
+
+.stack-cards .playing-card {
+  margin-left: -14em;
+}
+
+.high-stack-cards .playing-card {
+  margin-left: -17em;
+}
+
+.stack-cards:first-child .playing-card, .high-stack-cards:first-child .playing-card {
+  margin-left: 0;
+}
+
+.cards-on-hand {
+  //clear: both;
+}
+
+.playing-card .corner span {
+  font-size: 2.5em !important;
+}
+.playing-card .corner .number {
+  font-size: 2em !important;
+}
+
+.player0 {
+  clear: both;
+  margin: auto;
+  text-align: center;
+  width: 40%;
+}
+
+.player1 {
+  float: left;
+  width: 40%;
+}
+
+.player2 {
+  float: right;
+  width: 40%;
+}
+
+.player3 {
+  clear: both;
+  margin: auto;
+  width: 40%;
+}
+
+.meld playing-card > div {
+  margin-top: -2em
+}
+
+.playing-card:active {
+  z-index: 4;
+}
+
+.playerCard0 {
+  top: 1%;
+  left: 35%;
+  transform: rotate(2deg);
+}
+.playerCard1 {
+  left: 40%;
+  top: 30%;
+  transform: rotate(4deg);
+}
+.playerCard2 {
+  top: 60%;
+  left: 39%;
+  transform: rotate(6deg);
+}
+.playerCard3 {
+  left: 22%;
+  top: 30%;
+  transform: rotate(-5deg);
+}
+
+.playerStack0, .playerStack1, .playerStack2, .playerStack3 {
+  display: block;
+}
+.playerStack0.ng-leave, .playerStack1.ng-leave, .playerStack2.ng-leave, .playerStack3.ng-leave {
+}
+.playerCard0.ng-enter, .playerStack0.ng-leave {
+  top: -80% !important;
+  transform: rotate(-2deg);
+}
+
+.playerCard1.ng-enter, .playerStack1.ng-leave {
+  left: 120% !important;
+  transform: rotate(-4deg);
+}
+
+.playerCard2.ng-enter, .playerStack2.ng-leave {
+  top: 150% !important;
+  transform: rotate(-6deg);
+}
+
+.playerCard3.ng-enter, .playerStack3.ng-leave {
+  left: -60% !important;
+  transform: rotate(5deg);
+}
+.playerCard3.ng-leave, .playerCard0.ng-leave, .playerCard2.ng-leave, .playerCard1.ng-leave {
+/*  display: none;*/
+  transform: rotate(0deg);
+}
+
+.playerCard0, .playerCard1, .playerCard2, .playerCard3, .playerStack0, .playerStack1, .playerStack2, .playerStack3 {
+  transition: 0.3s;
+}
+
+table#main > tbody > tr > td {
+  height: 200px;
+  width: 33%;
+}
