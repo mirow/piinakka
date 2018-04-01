@@ -1,12 +1,12 @@
 "use strict";
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 var express = require('express');
 var bodyParser = require('body-parser');
-var GameOfPinochle_1 = require("./server/GameOfPinochle");
+const GameOfPinochle_1 = require("./server/GameOfPinochle");
 var app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-app.game = new GameOfPinochle_1["default"]();
+app.game = new GameOfPinochle_1.default();
 app.get('/api/start', function (req, res, next) {
     // start a new game, deal cards
     console.log('Starting game!');
@@ -31,7 +31,7 @@ app.get('/api/play-round', function (req, res, next) {
     }
 });
 app.get('/api/play-rounds', function (req, res, next) {
-    for (var n = 0; n < 10000; n++) {
+    for (let n = 0; n < 10000; n++) {
         app.game.newGame();
         if (app.game.state !== "cannotBid") {
             app.game.playRounds();

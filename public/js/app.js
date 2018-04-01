@@ -1,6 +1,6 @@
 var piinakka;
 (function (piinakka) {
-    var app = angular.module('piinakka', [
+    const app = angular.module('piinakka', [
         'ui.router',
         'ngSanitize',
         'ngPlayingCards',
@@ -10,10 +10,10 @@ var piinakka;
         $urlRouterProvider.otherwise('/');
       });
     */
-    app.config(function ($urlRouterProvider) {
+    app.config(($urlRouterProvider) => {
         $urlRouterProvider.otherwise('/');
     });
-    app.config(function ($stateProvider, $httpProvider) {
+    app.config(($stateProvider, $httpProvider) => {
         $stateProvider
             .state('main', {
             url: '/',
@@ -22,37 +22,35 @@ var piinakka;
             title: 'Piinakka'
         });
     });
-    var MainController = /** @class */ (function () {
-        function MainController($http, $timeout) {
-            var _this = this;
+    class MainController {
+        constructor($http, $timeout) {
             this.$http = $http;
             this.$timeout = $timeout;
             this.suits = ["spade", "heart", "club", "diamond"];
             this.ranks = ["ace", "ace", "ten", "ten", "king", "king", "queen", "queen", "jack", "jack", "nine", "nine"];
-            this.$http.get('/api/get-state').then(function (result) {
-                _this.game = _this.processResult(result.data);
-                switch (_this.game.state) {
+            this.$http.get('/api/get-state').then((result) => {
+                this.newState = this.processResult(result.data);
+                switch (this.newState.state) {
                     case "notStarted":
-                        _this.onStateChange("START");
+                        this.onStateChange("START");
                         break;
                     case "meldsShown":
-                        _this.newState = _this.game;
-                        _this.onStateChange("SHOW BIDS");
+                        this.onStateChange("SHOW BIDS");
                         break;
                     case "cannotBid":
-                        _this.onStateChange("CANNOT BID");
+                        this.onStateChange("CANNOT BID");
                         break;
                     case "readyToPlay":
-                        _this.newState = _this.game;
-                        _this.onStateChange("READY");
+                        this.game = this.newState;
+                        this.onStateChange("READY");
                         break;
                     case "gameOver":
-                        _this.onStateChange("GAME OVER");
+                        this.onStateChange("GAME OVER");
                         break;
                 }
             });
         }
-        MainController.prototype.onStateChange = function (newState) {
+        onStateChange(newState) {
             this.state = newState;
             switch (newState) {
                 case "START":
@@ -63,7 +61,13 @@ var piinakka;
                 case "CANNOT BID":
                     break;
                 case "SHOW BIDS":
-                    this.game = this.newState;
+                    this.showBids();
+                    break;
+                case "SHOW TALON":
+                    this.showTalon();
+                    break;
+                case "SHOW MELDS":
+                    this.showMelds();
                     break;
                 case "DISCARD":
                     this.discard();
@@ -81,89 +85,104 @@ var piinakka;
                     break;
                 default:
             }
-        };
-        MainController.prototype.processResult = function (data) {
-            var _this = this;
+        }
+        processResult(data) {
             if (data.cardsOnTable) {
-                data.cardsOnTable.cards.forEach(function (card, i) {
+                data.cardsOnTable.cards.forEach((card, i) => {
                     data.cardsOnTable.cards[i] = {
-                        rank: _this.ranks[card % 12],
-                        suit: _this.suits[Math.floor(card / 12)]
+                        rank: this.ranks[card % 12],
+                        suit: this.suits[Math.floor(card / 12)],
                     };
                 });
             }
             this.playerCount = data.players.length;
-            data.players.forEach(function (player, p) {
+            data.players.forEach((player, p) => {
                 if (player.cards.cards) {
                     player.cards.cards = player.cards.cards.slice(0, player.cards.cardCount);
-                    player.cards.cards.forEach(function (card, i) {
+                    player.cards.cards.forEach((card, i) => {
                         player.cards.cards[i] = {
-                            rank: _this.ranks[card % 12],
-                            suit: _this.suits[Math.floor(card / 12)],
+                            rank: this.ranks[card % 12],
+                            suit: this.suits[Math.floor(card / 12)],
                             meld: player.meldCards && player.meldCards.cards.indexOf(card) != -1,
                             id: card
                         };
                     });
-                    player.cards.cards.sort(function (a, b) { return (b.meld - a.meld) || (a.id - b.id); });
+                    player.cards.cards.sort((a, b) => (b.meld - a.meld) || (a.id - b.id));
                 }
             });
-            data.talon && data.talon.cards.forEach(function (card, i) {
+            data.talon && data.talon.cards.forEach((card, i) => {
                 data.talon.cards[i] = {
-                    rank: _this.ranks[card % 12],
-                    suit: _this.suits[Math.floor(card / 12)],
+                    rank: this.ranks[card % 12],
+                    suit: this.suits[Math.floor(card / 12)],
                     meld: false
                 };
             });
             return data;
-        };
-        MainController.prototype.deal = function () {
-            var _this = this;
+        }
+        deal() {
             this.cardsOnTable = [];
-            this.$http.get('/api/start').then(function (result) {
-                _this.newState = _this.processResult(result.data);
-                _this.onStateChange('SHOW BIDS');
+            this.$http.get('/api/start').then((result) => {
+                this.newState = this.processResult(result.data);
+                this.onStateChange('SHOW BIDS');
             });
-        };
-        MainController.prototype.playRound = function () {
-            var _this = this;
-            this.$http.get('/api/play-round').then(function (result) {
-                _this.starter = _this.game.starter;
-                _this.newState = _this.processResult(result.data);
-                _this.onStateChange("ANIMATE ROUND");
+        }
+        playRound() {
+            this.$http.get('/api/play-round').then((result) => {
+                this.starter = this.game.starter;
+                this.newState = this.processResult(result.data);
+                this.onStateChange("ANIMATE ROUND");
             });
-        };
-        MainController.prototype.discard = function () {
-            var _this = this;
-            this.$http.get('/api/discard').then(function (result) {
-                _this.newState = _this.processResult(result.data);
-                _this.starter = _this.game.starter;
-                _this.onStateChange('READY');
+        }
+        discard() {
+            this.$http.get('/api/discard').then((result) => {
+                this.newState = this.processResult(result.data);
+                this.starter = this.game.starter;
+                this.onStateChange('READY');
             });
-        };
-        MainController.prototype.animateCards = function (n) {
-            var _this = this;
+        }
+        animateCards(n) {
             if (!n) {
                 this.cardsOnTable = [];
-                this.newState.cardsOnTable.cards.forEach(function (card) { return card.stack = 'playerStack' + _this.game.starter; });
+                this.newState.cardsOnTable.cards.forEach((card) => card.stack = 'playerStack' + this.game.starter);
                 this.game.cardsOnTable = this.newState.cardsOnTable;
             }
             if (n < this.playerCount) {
-                this.$timeout(function () {
-                    _this.game.cardsOnTable.cards[n].player = 'playerCard' + (_this.starter + n) % _this.playerCount;
-                    _this.game.players[(_this.starter + n) % _this.playerCount].cards = _this.newState.players[(_this.starter + n) % _this.playerCount].cards;
-                    _this.cardsOnTable.push(_this.game.cardsOnTable.cards[n]);
-                    _this.animateCards(n + 1);
+                this.$timeout(() => {
+                    this.game.cardsOnTable.cards[n].player = 'playerCard' + (this.starter + n) % this.playerCount;
+                    this.game.players[(this.starter + n) % this.playerCount].cards = this.newState.players[(this.starter + n) % this.playerCount].cards;
+                    this.cardsOnTable.push(this.game.cardsOnTable.cards[n]);
+                    this.animateCards(n + 1);
                 }, 1000);
             }
             else {
-                this.$timeout(function () {
-                    _this.cardsOnTable = [];
-                    _this.onStateChange('READY');
-                }, 3000);
+                this.$timeout(() => {
+                    this.cardsOnTable = [];
+                    this.onStateChange('READY');
+                    if (!this.newState.players[0].cards.cards.length) {
+                        this.$timeout(() => this.onStateChange('GAME OVER'), 1000);
+                    }
+                }, 2000);
             }
-        };
-        return MainController;
-    }());
+        }
+        showTalon() {
+            this.game.talon = this.newState.talon;
+        }
+        showMelds() {
+            this.game = this.newState;
+        }
+        showBids() {
+            this.game = {
+                players: Array(this.playerCount).fill({}),
+                scores: this.newState.scores
+            };
+            this.game.players.forEach((player, idx) => {
+                player.cards = {
+                    cards: Array(15).fill({ rank: 'back', suit: 0, key: Math.random() * 10000 })
+                };
+                player.key = idx;
+            });
+        }
+    }
     app.controller('MainController', MainController);
 })(piinakka || (piinakka = {}));
 //# sourceMappingURL=app.js.map

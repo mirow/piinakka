@@ -2,8 +2,10 @@
   <tr>
     <td>
       <button ng-click="vm.onStateChange('DEAL')">New game</button>
-      <button ng-show="vm.state == 'SHOW BIDS'" ng-click="vm.discard()">Discard cards</button>
-      <button ng-show="vm.state == 'READY'" ng-click="vm.playRound()">Play round</button>
+      <button ng-show="vm.state == 'SHOW MELDS'" ng-click="vm.onStateChange('DISCARD');">Discard cards</button>
+      <button ng-show="vm.state == 'READY'" ng-click="vm.onStateChange('PLAY ROUND');">Play round</button>
+      <button ng-show="vm.state == 'SHOW BIDS'" ng-click="vm.onStateChange('SHOW TALON');">Show talon</button>
+      <button ng-show="vm.state == 'SHOW TALON'" ng-click="vm.onStateChange('SHOW MELDS');">Show melds</button>
       <div>{{vm.game.state}}</div>
       <div>{{vm.state}}</div>
       <div>Trump: {{vm.suits[vm.game.trump]}}</div>
@@ -26,7 +28,7 @@
                ng-class="[card.player, card.stack]">
             <playing-card rank="card.rank" suit="card.suit"/>
           </div>
-          <div ng-show="vm.state == 'SHOW BIDS'" ng-repeat="card in vm.game.talon.cards" class="stack-cards">
+          <div ng-show="vm.state == 'SHOW TALON'" ng-repeat="card in vm.game.talon.cards" class="stack-cards">
             <playing-card rank="card.rank" suit="card.suit"/>
           </div>
         </div>
@@ -34,22 +36,22 @@
           <table>
             <tr>
               <th></th>
-              <th ng-repeat="player in vm.game.players">Player {{$index}}</th>
+              <th ng-repeat="player in vm.game.players track by $index">Player {{$index}}</th>
             </tr>
             <tr>
               <th>Meld</th>
-              <td style="text-align: right" ng-repeat="player in vm.game.players">{{player.meldPoints}}</td>
+              <td style="text-align: right" ng-repeat="player in vm.game.players track by $index">{{player.meldPoints}}</td>
               <td><b>Bid:</b></td>
             </tr>
             <tr>
               <th>Tricks</th>
-              <td style="text-align: right" ng-repeat="player in vm.game.players">{{player.trickPoints}}</td>
+              <td style="text-align: right" ng-repeat="player in vm.game.players track by $index">{{player.trickPoints}}</td>
               <td>{{vm.game.winningBid}}, Player {{vm.game.bidWinner}}</td>
             </tr>
             <tr>
               <th>Total</th>
               <th style="text-align: right; border-top: 1px solid black"
-                  ng-repeat="player in vm.game.players">{{player.gamePoints}}
+                  ng-repeat="player in vm.game.players track by $index">{{player.gamePoints}}
               </th>
             </tr>
           </table>

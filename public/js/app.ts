@@ -46,7 +46,13 @@ module piinakka {
         case "CANNOT BID":
           break;
         case "SHOW BIDS":
-          this.game = this.newState;
+          this.showBids();
+          break;
+        case "SHOW TALON":
+          this.showTalon();
+          break;
+        case "SHOW MELDS":
+          this.showMelds();
           break;
         case "DISCARD":
           this.discard();
@@ -103,20 +109,19 @@ module piinakka {
 
     constructor(private $http, private $timeout) {
       this.$http.get('/api/get-state').then((result) => {
-        this.game = this.processResult(result.data);
-        switch (this.game.state) {
+        this.newState = this.processResult(result.data);
+        switch (this.newState.state) {
           case "notStarted":
             this.onStateChange("START");
             break;
           case "meldsShown":
-            this.newState = this.game;
             this.onStateChange("SHOW BIDS");
             break;
           case "cannotBid":
             this.onStateChange("CANNOT BID");
             break;
           case "readyToPlay":
-            this.newState = this.game;
+            this.game = this.newState;
             this.onStateChange("READY");
             break;
           case "gameOver":
@@ -170,8 +175,33 @@ module piinakka {
         this.$timeout(() => {
           this.cardsOnTable = [];
           this.onStateChange('READY');
-        }, 3000);
+          if (!this.newState.players[0].cards.cards.length) {
+            this.$timeout(() => this.onStateChange('GAME OVER'), 1000);
+          }
+        }, 2000);
       }
+    }
+
+    private showTalon() {
+      this.game.talon = this.newState.talon;
+    }
+
+    private showMelds() {
+      this.game = this.newState;
+    }
+
+    private showBids() {
+      this.game = {
+        players: Array(this.playerCount).fill({}),
+        scores: this.newState.scores
+      };
+      this.game.players.forEach((player, idx) => {
+        player.cards = {
+          cards: Array(
+            15).fill({rank: 'back', suit: 0, key: Math.random() * 10000})
+        };
+        player.key = idx;
+      });
     }
   }
 

@@ -1,6 +1,7 @@
 'use strict';
 import Cards from './Cards';
 import SetOfCards from "./SetOfCards";
+import Util from "./Util";
 
 export default class Deck extends SetOfCards {
 
@@ -11,17 +12,14 @@ export default class Deck extends SetOfCards {
     this.reset();
   }
 
-  static random() {
-    var x = Math.cos(Deck.seed++) * 10000;
-    return x - Math.floor(x);
-  }
+
 
   shuffle() {
     let m: number;
     let tmp: number;
 
     for (let n = 0; n < this.cardCount; n++) {
-      m = Math.floor(Deck.random() * this.cardCount);
+      m = Math.floor(Util.random() * this.cardCount);
       tmp = this.cards[n];
       this.cards[n] = this.cards[m];
       this.cards[m] = tmp;

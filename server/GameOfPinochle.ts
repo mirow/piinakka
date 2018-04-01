@@ -3,7 +3,6 @@ import Cards from './Cards';
 import SetOfCards from './SetOfCards';
 import Deck from './Deck';
 import Player from './Player';
-import Player2 from "./Player2";
 
 export default class GameOfPinochle {
   NumberOfPlayers: number = 3;

@@ -1,10 +1,10 @@
 <div class="cards-on-hand">
   <div>
     <span>Player {{i}}</span>
-    <span ng-if="vm.state=='SHOW BIDS' || vm.game.bidWinner==i"><br/>Bid: {{vm.game.players[i].bid}}</span>
+    <span ng-if="vm.state=='SHOW BIDS' || vm.state=='SHOW TALON' || vm.state=='SHOW MELDS' || vm.game.bidWinner==i"><br/>Bid: {{vm.game.scores[i].bid}}</span>
     <span ng-if="vm.state=='READY'">
-      <br/>Meld: {{vm.game.players[i].meldPoints}}
-      <br/>Tricks: {{vm.game.players[i].trickPoints}}
+      <br/>Meld: {{vm.game.scores[i].meldPoints}}
+      <br/>Tricks: {{vm.game.scores[i].trickPoints}}
     </span>
     <br/>
     <br/>

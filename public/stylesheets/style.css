@@ -85,24 +85,22 @@ a {
 .playerStack0, .playerStack1, .playerStack2, .playerStack3 {
   display: block;
 }
-.playerStack0.ng-leave, .playerStack1.ng-leave, .playerStack2.ng-leave, .playerStack3.ng-leave {
-}
-.playerCard0.ng-enter, .playerStack0.ng-leave {
+.playerCard0.ng-enter, .playerStack0.ng-leave.ng-leave-active {
   top: -80% !important;
   transform: rotate(-2deg);
 }
 
-.playerCard1.ng-enter, .playerStack1.ng-leave {
+.playerCard1.ng-enter, .playerStack1.ng-leave.ng-leave-active {
   left: 120% !important;
   transform: rotate(-4deg);
 }
 
-.playerCard2.ng-enter, .playerStack2.ng-leave {
+.playerCard2.ng-enter, .playerStack2.ng-leave.ng-leave-active {
   top: 150% !important;
   transform: rotate(-6deg);
 }
 
-.playerCard3.ng-enter, .playerStack3.ng-leave {
+.playerCard3.ng-enter, .playerStack3.ng-leave.ng-leave-active {
   left: -60% !important;
   transform: rotate(5deg);
 }

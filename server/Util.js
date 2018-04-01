@@ -1,7 +1,20 @@
 "use strict";
-exports.__esModule = true;
-var Util = /** @class */ (function () {
-    function Util() {
+Object.defineProperty(exports, "__esModule", { value: true });
+class Util {
+    constructor() {
+    }
+    static seed(i) {
+        Util.m_w = i;
+        Util.m_z = 987654321;
+    }
+    // Returns number between 0 (inclusive) and 1.0 (exclusive),
+    // just like Math.random().
+    static random() {
+        Util.m_z = (36969 * (Util.m_z & 65535) + (Util.m_z >> 16)) & Util.mask;
+        Util.m_w = (18000 * (Util.m_w & 65535) + (Util.m_w >> 16)) & Util.mask;
+        let result = ((Util.m_z << 16) + Util.m_w) & Util.mask;
+        result /= 4294967296;
+        return result + 0.5;
     }
     /**
      * Sorts the first count integers in the given array in ascending order.
@@ -11,14 +24,14 @@ var Util = /** @class */ (function () {
      * @param count int  number of items to sort
      * @return int[] sorted array
      */
-    Util.ArraySort = function (arr, count) {
-        var swapped;
-        var n;
-        var tmp;
+    static ArraySort(arr, count) {
+        let swapped;
+        let n;
+        let tmp;
         n = count;
         do {
             swapped = false;
-            for (var i = 0; i < n - 1; i++) {
+            for (let i = 0; i < n - 1; i++) {
                 if (arr[i] > arr[i + 1]) {
                     // swap cards
                     tmp = arr[i];
@@ -31,7 +44,7 @@ var Util = /** @class */ (function () {
         } while (swapped);
         //     return arr;
         return;
-    };
+    }
     /**
      * Sorts two arrays based on the values in the first array (in ascending order).
      *
@@ -39,14 +52,14 @@ var Util = /** @class */ (function () {
      * @param arr2 int[] array that is also arranged
      * @return int[][] sorted arrays
      */
-    Util.SortCardsByOdds = function (arr, arr2) {
-        var swapped;
-        var n;
-        var tmp;
+    static SortCardsByOdds(arr, arr2) {
+        let swapped;
+        let n;
+        let tmp;
         n = arr.length;
         do {
             swapped = false;
-            for (var i = 0; i < n - 1; i++) {
+            for (let i = 0; i < n - 1; i++) {
                 if (arr[i] > arr[i + 1]) {
                     // swap cards
                     tmp = arr[i];
@@ -62,8 +75,10 @@ var Util = /** @class */ (function () {
         } while (swapped);
         //     return new int[][] {arr, arr2};
         return;
-    };
-    return Util;
-}());
-exports["default"] = Util;
+    }
+}
+Util.m_w = 123456789;
+Util.m_z = 987654321;
+Util.mask = 0xffffffff;
+exports.default = Util;
 //# sourceMappingURL=Util.js.map

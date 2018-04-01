@@ -2,6 +2,25 @@ export default class Util {
   constructor() {
   }
 
+  static m_w = 123456789;
+  static m_z = 987654321;
+  static mask = 0xffffffff;
+
+  static seed(i) {
+    Util.m_w = i;
+    Util.m_z = 987654321;
+  }
+
+  // Returns number between 0 (inclusive) and 1.0 (exclusive),
+  // just like Math.random().
+  static random() {
+    Util.m_z = (36969 * (Util.m_z & 65535) + (Util.m_z >> 16)) & Util.mask;
+    Util.m_w = (18000 * (Util.m_w & 65535) + (Util.m_w >> 16)) & Util.mask;
+    let result = ((Util.m_z << 16) + Util.m_w) & Util.mask;
+    result /= 4294967296;
+    return result + 0.5;
+  }
+
   /**
    * Sorts the first count integers in the given array in ascending order.
    * Preserves the original length of the array.
